@@ -1039,7 +1039,9 @@ const hasil = await response.json();
         // Perbarui semua data yang terlihat tanpa reload browser.
         await loadDashboard();
 
-        // Muat ulang daftar barang agar stok pada pencarian langsung berubah.
+        // Paksa ambil ulang data stok terbaru setelah transaksi tersimpan.
+        salesProductsLoaded = false;
+        salesProducts = [];
         await loadSalesProducts();
 
       } else {
@@ -1254,7 +1256,9 @@ const hasil = await response.json();
         await loadStok();
       }
 
-      // Muat ulang daftar barang agar stok pada pencarian langsung berubah.
+      // Paksa ambil ulang data stok terbaru setelah transaksi tersimpan.
+      purchaseProductsLoaded = false;
+      purchaseProducts = [];
       await loadPurchaseProducts();
 
     } catch (error) {
