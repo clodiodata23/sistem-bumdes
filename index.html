@@ -354,83 +354,6 @@
       .cards { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
     }
-  
-
-  /* ============================================================
-     PENCARIAN BARANG - PENJUALAN
-     ============================================================ */
-  .sales-product-picker {
-    position: relative;
-  }
-
-  .sales-product-list {
-    position: absolute;
-    z-index: 50;
-    left: 0;
-    right: 0;
-    top: calc(100% + 4px);
-    max-height: 280px;
-    overflow-y: auto;
-    background: #ffffff;
-    border: 1px solid #d7e2dc;
-    border-radius: 10px;
-    box-shadow: 0 10px 24px rgba(0,0,0,.10);
-  }
-
-  .sales-product-option {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 12px 14px;
-    border: 0;
-    border-bottom: 1px solid #edf2ef;
-    background: #fff;
-    text-align: left;
-    cursor: pointer;
-    font: inherit;
-  }
-
-  .sales-product-option:last-child {
-    border-bottom: 0;
-  }
-
-  .sales-product-option:hover {
-    background: #f4faf6;
-  }
-
-  .sales-product-name {
-    font-weight: 600;
-    color: #172b22;
-  }
-
-  .sales-product-id {
-    margin-top: 3px;
-    font-size: 12px;
-    color: #6b7b73;
-  }
-
-  .sales-product-stock {
-    white-space: nowrap;
-    font-size: 12px;
-    color: #496057;
-  }
-
-  .sales-product-info {
-    margin-top: 6px;
-    font-size: 13px;
-    color: #64756d;
-  }
-
-  .sales-product-info.selected {
-    color: #17653f;
-  }
-
-  .sales-product-info.warning {
-    color: #a05a00;
-  }
-
   </style>
 </head>
 
@@ -504,15 +427,9 @@
 
         <form id="salesForm">
           <div class="form-grid">
-            <div class="sales-product-field">
-              <label for="salesSearch">Barang</label>
-              <div class="sales-product-picker" id="salesProductPicker">
-                <input id="salesSearch" type="text" autocomplete="off"
-                       placeholder="🔍 Cari nama barang...">
-                <input id="idBarang" name="idBarang" type="hidden">
-                <div id="salesProductList" class="sales-product-list" hidden></div>
-              </div>
-              <div id="salesProductInfo" class="sales-product-info">Pilih barang dari daftar.</div>
+            <div>
+              <label for="idBarang">ID Barang</label>
+              <input id="idBarang" name="idBarang" placeholder="Contoh: BRG001" required>
             </div>
 
             <div>
@@ -563,15 +480,9 @@
 
         <form id="purchaseForm">
           <div class="form-grid">
-            <div class="sales-product-field">
-              <label for="purchaseSearch">Barang</label>
-              <div class="sales-product-picker" id="purchaseProductPicker">
-                <input id="purchaseSearch" type="text" autocomplete="off"
-                       placeholder="🔍 Cari nama barang...">
-                <input id="purchaseIdBarang" name="idBarang" type="hidden" required>
-                <div id="purchaseProductList" class="sales-product-list" hidden></div>
-              </div>
-              <div id="purchaseProductInfo" class="sales-product-info">Pilih barang dari daftar.</div>
+            <div>
+              <label for="purchaseIdBarang">ID Barang</label>
+              <input id="purchaseIdBarang" placeholder="Contoh: BRG001" required>
             </div>
 
             <div>
@@ -745,10 +656,58 @@
     <!-- KAS -->
     <section id="page-kas" class="page">
       <div class="panel">
-        <h2 class="section-title">Kas</h2>
-        <div class="status-box">
-          Data kas akan kita tampilkan langsung dari sheet KAS pada tahap berikutnya.
+        <div class="table-toolbar">
+          <div>
+            <h2 class="section-title" style="margin-bottom:5px;">Kas</h2>
+            <div class="help">Data diambil langsung dari sheet KAS Google Sheets.</div>
+          </div>
+          <button class="btn btn-secondary" type="button" onclick="loadKas()">↻ Refresh Kas</button>
         </div>
+
+        <div class="cards" style="margin-bottom:18px;">
+          <div class="card">
+            <div class="metric-label">Total Kas Masuk</div>
+            <div class="metric-value" id="kasTotalMasuk">Rp0</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Total Kas Keluar</div>
+            <div class="metric-value" id="kasTotalKeluar">Rp0</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Saldo Akhir</div>
+            <div class="metric-value" id="kasSaldoAkhir">Rp0</div>
+          </div>
+        </div>
+
+        <div class="table-toolbar">
+          <input id="kasSearch" type="search"
+                 placeholder="Cari keterangan, kategori, ID, atau referensi..."
+                 oninput="filterKas()">
+          <div class="help" id="kasSummary">Memuat data kas...</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID Kas</th>
+                <th>Tanggal</th>
+                <th>Jenis</th>
+                <th>Kategori</th>
+                <th>Keterangan</th>
+                <th>Kas Masuk</th>
+                <th>Kas Keluar</th>
+                <th>Saldo</th>
+                <th>Referensi</th>
+              </tr>
+            </thead>
+            <tbody id="kasTableBody">
+              <tr><td colspan="9" class="empty-state">Memuat data kas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="kasResult" class="result"></div>
       </div>
     </section>
 
@@ -790,12 +749,12 @@
       loadStok();
     }
 
-    if (pageName === "penjualan") {
-      loadSalesProducts();
-    }
-
     if (pageName === "dashboard") {
       loadDashboard();
+    }
+
+    if (pageName === "kas") {
+      loadKas();
     }
   }
 
@@ -841,133 +800,6 @@
 
 
   // ============================================================
-  // DATA BARANG UNTUK PENJUALAN
-  // ============================================================
-
-  let salesProducts = [];
-  let salesProductsLoaded = false;
-
-  async function loadSalesProducts() {
-    if (salesProductsLoaded) return;
-
-    const searchInput = document.getElementById("salesSearch");
-    const list = document.getElementById("salesProductList");
-    const info = document.getElementById("salesProductInfo");
-
-    if (!searchInput || !list) return;
-
-    info.textContent = "Memuat daftar barang...";
-
-    try {
-      const response = await fetch(API_URL + "?action=getStok", { cache: "no-store" });
-      const hasil = await response.json();
-
-      if (hasil.status !== "success") {
-        throw new Error(hasil.message || "Gagal mengambil daftar barang.");
-      }
-
-      salesProducts = Array.isArray(hasil.data) ? hasil.data : [];
-      salesProductsLoaded = true;
-      info.textContent = salesProducts.length
-        ? "Ketik nama barang untuk mencari, lalu pilih dari daftar."
-        : "Belum ada data barang.";
-    } catch (error) {
-      info.textContent = "❌ Daftar barang gagal dimuat.";
-      console.error(error);
-    }
-  }
-
-  function renderSalesProductList(keyword = "") {
-    const list = document.getElementById("salesProductList");
-    if (!list) return;
-
-    const q = String(keyword || "").trim().toLowerCase();
-    const filtered = salesProducts.filter(item =>
-      String(item.namaBarang || "").toLowerCase().includes(q) ||
-      String(item.idBarang || "").toLowerCase().includes(q)
-    );
-
-    if (!filtered.length) {
-      list.innerHTML = '<div style="padding:14px;color:#6b7b73;">Barang tidak ditemukan.</div>';
-      list.hidden = false;
-      return;
-    }
-
-    list.innerHTML = filtered.map(item => {
-      const stok = Number(item.stokAkhir) || 0;
-      const status = String(item.status || "");
-      const stockText = stok > 0 ? `Stok: ${formatNumber(stok)}` : "Stok habis";
-
-      return `
-        <button type="button" class="sales-product-option" data-id="${escapeHtml(item.idBarang)}">
-          <span>
-            <span class="sales-product-name">${escapeHtml(item.namaBarang)}</span>
-            <span class="sales-product-id">${escapeHtml(item.idBarang)}</span>
-          </span>
-          <span class="sales-product-stock">${escapeHtml(stockText)}</span>
-        </button>`;
-    }).join("");
-
-    list.querySelectorAll(".sales-product-option").forEach(button => {
-      button.addEventListener("click", function() {
-        selectSalesProduct(this.dataset.id);
-      });
-    });
-
-    list.hidden = false;
-  }
-
-  function selectSalesProduct(idBarang) {
-    const item = salesProducts.find(x => String(x.idBarang) === String(idBarang));
-    if (!item) return;
-
-    document.getElementById("idBarang").value = item.idBarang;
-    document.getElementById("salesSearch").value = item.namaBarang;
-    document.getElementById("salesProductList").hidden = true;
-
-    const info = document.getElementById("salesProductInfo");
-    const stok = Number(item.stokAkhir) || 0;
-
-    if (stok <= 0) {
-      info.className = "sales-product-info warning";
-      info.textContent = `⚠️ ${item.namaBarang} sedang habis.`;
-    } else {
-      info.className = "sales-product-info selected";
-      info.textContent = `✓ ${item.namaBarang} dipilih • Stok tersedia: ${formatNumber(stok)}`;
-    }
-  }
-
-  function clearSalesProductSelection() {
-    document.getElementById("idBarang").value = "";
-    document.getElementById("salesProductInfo").className = "sales-product-info";
-    document.getElementById("salesProductInfo").textContent = "Pilih barang dari daftar.";
-  }
-
-  // ============================================================
-  // EVENT PENCARIAN BARANG
-  // ============================================================
-
-  document.getElementById("salesSearch").addEventListener("focus", async function() {
-    await loadSalesProducts();
-    renderSalesProductList(this.value);
-  });
-
-  document.getElementById("salesSearch").addEventListener("input", async function() {
-    clearSalesProductSelection();
-    await loadSalesProducts();
-    renderSalesProductList(this.value);
-  });
-
-  document.addEventListener("click", function(event) {
-    const picker = document.getElementById("salesProductPicker");
-    const list = document.getElementById("salesProductList");
-    if (picker && list && !picker.contains(event.target)) {
-      list.hidden = true;
-    }
-  });
-
-
-  // ============================================================
   // SIMPAN PENJUALAN
   // ============================================================
 
@@ -988,18 +820,8 @@
 
     if (!data.idBarang || data.qty <= 0) {
       result.className = "result error";
-      result.textContent = "Pilih barang dan isi jumlah penjualan terlebih dahulu.";
+      result.textContent = "ID barang dan jumlah penjualan wajib diisi.";
       return;
-    }
-
-    const selectedProduct = salesProducts.find(x => String(x.idBarang) === String(data.idBarang));
-    if (selectedProduct) {
-      const stokTersedia = Number(selectedProduct.stokAkhir) || 0;
-      if (data.qty > stokTersedia) {
-        result.className = "result error";
-        result.textContent = `❌ Stok ${selectedProduct.namaBarang} tidak mencukupi. Stok tersedia: ${formatNumber(stokTersedia)}.`;
-        return;
-      }
     }
 
     button.disabled = true;
@@ -1031,18 +853,9 @@ const hasil = await response.json();
           "Laba kotor: <strong>" + formatRupiah(hasil.labaKotor) + "</strong>";
 
         document.getElementById("salesForm").reset();
-        document.getElementById("salesProductInfo").className = "sales-product-info";
-        document.getElementById("salesProductInfo").textContent = "Pilih barang dari daftar.";
-        salesProductsLoaded = false;
-        salesProducts = [];
 
-        // Perbarui semua data yang terlihat tanpa reload browser.
-        await loadDashboard();
-
-        // Paksa ambil ulang data stok terbaru setelah transaksi tersimpan.
-        salesProductsLoaded = false;
-        salesProducts = [];
-        await loadSalesProducts();
+        // Perbarui Dashboard setelah transaksi berhasil.
+        loadDashboard();
 
       } else {
         throw new Error(hasil.message || "Gagal menyimpan transaksi.");
@@ -1059,122 +872,6 @@ const hasil = await response.json();
   });
 
 
-
-
-  // ============================================================
-  // DATA BARANG UNTUK BARANG MASUK
-  // ============================================================
-
-  let purchaseProducts = [];
-  let purchaseProductsLoaded = false;
-
-  async function loadPurchaseProducts() {
-    if (purchaseProductsLoaded) return;
-
-    const searchInput = document.getElementById("purchaseSearch");
-    const list = document.getElementById("purchaseProductList");
-    const info = document.getElementById("purchaseProductInfo");
-
-    if (!searchInput || !list) return;
-
-    info.textContent = "Memuat daftar barang...";
-
-    try {
-      const response = await fetch(API_URL + "?action=getStok", { cache: "no-store" });
-      const hasil = await response.json();
-
-      if (hasil.status !== "success") {
-        throw new Error(hasil.message || "Gagal mengambil daftar barang.");
-      }
-
-      purchaseProducts = Array.isArray(hasil.data) ? hasil.data : [];
-      purchaseProductsLoaded = true;
-      info.textContent = purchaseProducts.length
-        ? "Ketik nama barang untuk mencari, lalu pilih dari daftar."
-        : "Belum ada data barang.";
-    } catch (error) {
-      info.textContent = "❌ Daftar barang gagal dimuat.";
-      console.error(error);
-    }
-  }
-
-  function renderPurchaseProductList(keyword = "") {
-    const list = document.getElementById("purchaseProductList");
-    if (!list) return;
-
-    const q = String(keyword || "").trim().toLowerCase();
-    const filtered = purchaseProducts.filter(item =>
-      String(item.namaBarang || "").toLowerCase().includes(q) ||
-      String(item.idBarang || "").toLowerCase().includes(q)
-    );
-
-    if (!filtered.length) {
-      list.innerHTML = '<div style="padding:14px;color:#6b7b73;">Barang tidak ditemukan.</div>';
-      list.hidden = false;
-      return;
-    }
-
-    list.innerHTML = filtered.map(item => {
-      const stok = Number(item.stokAkhir) || 0;
-      const stockText = stok > 0 ? `Stok saat ini: ${formatNumber(stok)}` : "Stok saat ini: 0";
-
-      return `
-        <button type="button" class="sales-product-option" data-id="${escapeHtml(item.idBarang)}">
-          <span>
-            <span class="sales-product-name">${escapeHtml(item.namaBarang)}</span>
-            <span class="sales-product-id">${escapeHtml(item.idBarang)}</span>
-          </span>
-          <span class="sales-product-stock">${escapeHtml(stockText)}</span>
-        </button>`;
-    }).join("");
-
-    list.querySelectorAll(".sales-product-option").forEach(button => {
-      button.addEventListener("click", function() {
-        selectPurchaseProduct(this.dataset.id);
-      });
-    });
-
-    list.hidden = false;
-  }
-
-  function selectPurchaseProduct(idBarang) {
-    const item = purchaseProducts.find(x => String(x.idBarang) === String(idBarang));
-    if (!item) return;
-
-    document.getElementById("purchaseIdBarang").value = item.idBarang;
-    document.getElementById("purchaseSearch").value = item.namaBarang;
-    document.getElementById("purchaseProductList").hidden = true;
-
-    const info = document.getElementById("purchaseProductInfo");
-    const stok = Number(item.stokAkhir) || 0;
-    info.className = "sales-product-info selected";
-    info.textContent = `✓ ${item.namaBarang} dipilih • Stok saat ini: ${formatNumber(stok)}`;
-  }
-
-  function clearPurchaseProductSelection() {
-    document.getElementById("purchaseIdBarang").value = "";
-    document.getElementById("purchaseProductInfo").className = "sales-product-info";
-    document.getElementById("purchaseProductInfo").textContent = "Pilih barang dari daftar.";
-  }
-
-  document.getElementById("purchaseSearch").addEventListener("focus", async function() {
-    await loadPurchaseProducts();
-    renderPurchaseProductList(this.value);
-  });
-
-  document.getElementById("purchaseSearch").addEventListener("input", async function() {
-    clearPurchaseProductSelection();
-    await loadPurchaseProducts();
-    renderPurchaseProductList(this.value);
-  });
-
-  document.addEventListener("click", function(event) {
-    const picker = document.getElementById("purchaseProductPicker");
-    const list = document.getElementById("purchaseProductList");
-    if (picker && list && !picker.contains(event.target)) {
-      list.hidden = true;
-    }
-  });
 
 
   // ============================================================
@@ -1205,7 +902,7 @@ const hasil = await response.json();
 
     if (!data.idBarang || data.qty <= 0 || data.hargaBeli < 0 || !data.supplier) {
       result.className = "result error";
-      result.textContent = "❌ Barang, jumlah, supplier, dan harga beli wajib diisi. Pilih barang dari daftar.";
+      result.textContent = "❌ ID barang, jumlah, supplier, dan harga beli wajib diisi.";
       return;
     }
 
@@ -1246,20 +943,14 @@ const hasil = await response.json();
         "Total pembelian: <strong>" + formatRupiah(hasil.totalPembelian) + "</strong>";
 
       document.getElementById("purchaseForm").reset();
-      clearPurchaseProductSelection();
 
-      // Perbarui semua data yang terlihat tanpa reload browser.
-      await loadDashboard();
+      // Perbarui Dashboard setelah barang masuk berhasil.
+      loadDashboard();
 
-      // Perbarui stok jika halaman Stok sudah pernah dibuka.
+      // Jika halaman Stok sudah pernah dibuka, muat ulang datanya.
       if (typeof loadStok === "function") {
-        await loadStok();
+        loadStok();
       }
-
-      // Paksa ambil ulang data stok terbaru setelah transaksi tersimpan.
-      purchaseProductsLoaded = false;
-      purchaseProducts = [];
-      await loadPurchaseProducts();
 
     } catch (error) {
       result.className = "result error";
@@ -1494,6 +1185,110 @@ const hasil = await response.json();
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+
+  // ============================================================
+  // DATA KAS
+  // ============================================================
+
+  let kasData = [];
+
+  async function loadKas() {
+    const tbody = document.getElementById("kasTableBody");
+    const summary = document.getElementById("kasSummary");
+    const result = document.getElementById("kasResult");
+
+    if (!tbody) return;
+
+    tbody.innerHTML =
+      '<tr><td colspan="9" class="empty-state">⏳ Memuat data kas...</td></tr>';
+    summary.textContent = "Memuat data kas...";
+    result.className = "result";
+    result.textContent = "";
+
+    try {
+      const response = await fetch(API_URL + "?action=getKas&ts=" + Date.now(), {
+        method: "GET",
+        cache: "no-store"
+      });
+
+      const hasil = await response.json();
+
+      if (hasil.status !== "success") {
+        throw new Error(hasil.message || "Gagal mengambil data kas.");
+      }
+
+      kasData = Array.isArray(hasil.data) ? hasil.data : [];
+
+      const s = hasil.summary || {};
+      document.getElementById("kasTotalMasuk").textContent = formatRupiah(s.totalMasuk);
+      document.getElementById("kasTotalKeluar").textContent = formatRupiah(s.totalKeluar);
+      document.getElementById("kasSaldoAkhir").textContent = formatRupiah(s.saldoAkhir);
+
+      renderKas(kasData);
+    } catch (error) {
+      tbody.innerHTML =
+        '<tr><td colspan="9" class="empty-state">❌ Gagal mengambil data kas.</td></tr>';
+      summary.textContent = "Data kas gagal dimuat.";
+      result.className = "result error";
+      result.textContent = "❌ " + error.message;
+      console.error(error);
+    }
+  }
+
+  function renderKas(data) {
+    const tbody = document.getElementById("kasTableBody");
+    const summary = document.getElementById("kasSummary");
+    if (!tbody) return;
+
+    if (!data.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="9" class="empty-state">Belum ada transaksi kas.</td></tr>';
+      summary.textContent = "0 transaksi";
+      return;
+    }
+
+    tbody.innerHTML = data.slice().reverse().map(item => {
+      const jenis = String(item.jenis || "").toUpperCase();
+      const badgeClass = jenis === "MASUK" ? "badge-safe" :
+                         jenis === "KELUAR" ? "badge-danger" : "badge-empty";
+
+      return `
+        <tr>
+          <td>${escapeHtml(item.idKas)}</td>
+          <td>${escapeHtml(item.tanggal)}</td>
+          <td><span class="badge ${badgeClass}">${escapeHtml(jenis || "—")}</span></td>
+          <td>${escapeHtml(item.kategori)}</td>
+          <td><strong>${escapeHtml(item.keterangan)}</strong></td>
+          <td>${item.debit > 0 ? formatRupiah(item.debit) : "—"}</td>
+          <td>${item.kredit > 0 ? formatRupiah(item.kredit) : "—"}</td>
+          <td class="stock-number">${formatRupiah(item.saldo)}</td>
+          <td>${escapeHtml(item.referensi || "—")}</td>
+        </tr>`;
+    }).join("");
+
+    summary.textContent = `${data.length} transaksi kas`;
+  }
+
+  function filterKas() {
+    const keyword = document.getElementById("kasSearch").value.trim().toLowerCase();
+
+    if (!keyword) {
+      renderKas(kasData);
+      return;
+    }
+
+    const filtered = kasData.filter(item =>
+      String(item.idKas || "").toLowerCase().includes(keyword) ||
+      String(item.tanggal || "").toLowerCase().includes(keyword) ||
+      String(item.jenis || "").toLowerCase().includes(keyword) ||
+      String(item.kategori || "").toLowerCase().includes(keyword) ||
+      String(item.keterangan || "").toLowerCase().includes(keyword) ||
+      String(item.referensi || "").toLowerCase().includes(keyword)
+    );
+
+    renderKas(filtered);
   }
 
   // ============================================================
