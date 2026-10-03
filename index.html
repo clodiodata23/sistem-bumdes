@@ -563,9 +563,15 @@
 
         <form id="purchaseForm">
           <div class="form-grid">
-            <div>
-              <label for="purchaseIdBarang">ID Barang</label>
-              <input id="purchaseIdBarang" placeholder="Contoh: BRG001" required>
+            <div class="sales-product-field">
+              <label for="purchaseSearch">Barang</label>
+              <div class="sales-product-picker" id="purchaseProductPicker">
+                <input id="purchaseSearch" type="text" autocomplete="off"
+                       placeholder="🔍 Cari nama barang...">
+                <input id="purchaseIdBarang" name="idBarang" type="hidden" required>
+                <div id="purchaseProductList" class="sales-product-list" hidden></div>
+              </div>
+              <div id="purchaseProductInfo" class="sales-product-info">Pilih barang dari daftar.</div>
             </div>
 
             <div>
@@ -1051,6 +1057,122 @@ const hasil = await response.json();
 
 
   // ============================================================
+  // DATA BARANG UNTUK BARANG MASUK
+  // ============================================================
+
+  let purchaseProducts = [];
+  let purchaseProductsLoaded = false;
+
+  async function loadPurchaseProducts() {
+    if (purchaseProductsLoaded) return;
+
+    const searchInput = document.getElementById("purchaseSearch");
+    const list = document.getElementById("purchaseProductList");
+    const info = document.getElementById("purchaseProductInfo");
+
+    if (!searchInput || !list) return;
+
+    info.textContent = "Memuat daftar barang...";
+
+    try {
+      const response = await fetch(API_URL + "?action=getStok", { cache: "no-store" });
+      const hasil = await response.json();
+
+      if (hasil.status !== "success") {
+        throw new Error(hasil.message || "Gagal mengambil daftar barang.");
+      }
+
+      purchaseProducts = Array.isArray(hasil.data) ? hasil.data : [];
+      purchaseProductsLoaded = true;
+      info.textContent = purchaseProducts.length
+        ? "Ketik nama barang untuk mencari, lalu pilih dari daftar."
+        : "Belum ada data barang.";
+    } catch (error) {
+      info.textContent = "❌ Daftar barang gagal dimuat.";
+      console.error(error);
+    }
+  }
+
+  function renderPurchaseProductList(keyword = "") {
+    const list = document.getElementById("purchaseProductList");
+    if (!list) return;
+
+    const q = String(keyword || "").trim().toLowerCase();
+    const filtered = purchaseProducts.filter(item =>
+      String(item.namaBarang || "").toLowerCase().includes(q) ||
+      String(item.idBarang || "").toLowerCase().includes(q)
+    );
+
+    if (!filtered.length) {
+      list.innerHTML = '<div style="padding:14px;color:#6b7b73;">Barang tidak ditemukan.</div>';
+      list.hidden = false;
+      return;
+    }
+
+    list.innerHTML = filtered.map(item => {
+      const stok = Number(item.stokAkhir) || 0;
+      const stockText = stok > 0 ? `Stok saat ini: ${formatNumber(stok)}` : "Stok saat ini: 0";
+
+      return `
+        <button type="button" class="sales-product-option" data-id="${escapeHtml(item.idBarang)}">
+          <span>
+            <span class="sales-product-name">${escapeHtml(item.namaBarang)}</span>
+            <span class="sales-product-id">${escapeHtml(item.idBarang)}</span>
+          </span>
+          <span class="sales-product-stock">${escapeHtml(stockText)}</span>
+        </button>`;
+    }).join("");
+
+    list.querySelectorAll(".sales-product-option").forEach(button => {
+      button.addEventListener("click", function() {
+        selectPurchaseProduct(this.dataset.id);
+      });
+    });
+
+    list.hidden = false;
+  }
+
+  function selectPurchaseProduct(idBarang) {
+    const item = purchaseProducts.find(x => String(x.idBarang) === String(idBarang));
+    if (!item) return;
+
+    document.getElementById("purchaseIdBarang").value = item.idBarang;
+    document.getElementById("purchaseSearch").value = item.namaBarang;
+    document.getElementById("purchaseProductList").hidden = true;
+
+    const info = document.getElementById("purchaseProductInfo");
+    const stok = Number(item.stokAkhir) || 0;
+    info.className = "sales-product-info selected";
+    info.textContent = `✓ ${item.namaBarang} dipilih • Stok saat ini: ${formatNumber(stok)}`;
+  }
+
+  function clearPurchaseProductSelection() {
+    document.getElementById("purchaseIdBarang").value = "";
+    document.getElementById("purchaseProductInfo").className = "sales-product-info";
+    document.getElementById("purchaseProductInfo").textContent = "Pilih barang dari daftar.";
+  }
+
+  document.getElementById("purchaseSearch").addEventListener("focus", async function() {
+    await loadPurchaseProducts();
+    renderPurchaseProductList(this.value);
+  });
+
+  document.getElementById("purchaseSearch").addEventListener("input", async function() {
+    clearPurchaseProductSelection();
+    await loadPurchaseProducts();
+    renderPurchaseProductList(this.value);
+  });
+
+  document.addEventListener("click", function(event) {
+    const picker = document.getElementById("purchaseProductPicker");
+    const list = document.getElementById("purchaseProductList");
+    if (picker && list && !picker.contains(event.target)) {
+      list.hidden = true;
+    }
+  });
+
+
+  // ============================================================
   // SIMPAN BARANG MASUK
   // ============================================================
 
@@ -1078,7 +1200,7 @@ const hasil = await response.json();
 
     if (!data.idBarang || data.qty <= 0 || data.hargaBeli < 0 || !data.supplier) {
       result.className = "result error";
-      result.textContent = "❌ ID barang, jumlah, supplier, dan harga beli wajib diisi.";
+      result.textContent = "❌ Barang, jumlah, supplier, dan harga beli wajib diisi. Pilih barang dari daftar.";
       return;
     }
 
@@ -1119,6 +1241,7 @@ const hasil = await response.json();
         "Total pembelian: <strong>" + formatRupiah(hasil.totalPembelian) + "</strong>";
 
       document.getElementById("purchaseForm").reset();
+      clearPurchaseProductSelection();
 
       // Perbarui Dashboard setelah barang masuk berhasil.
       loadDashboard();
