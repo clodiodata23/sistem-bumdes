@@ -547,16 +547,15 @@
 
         <form id="salesForm">
           <div class="form-grid">
-            <div>
-              <label for="idBarang">Barang</label>
-              <div class="searchable-wrap">
-                <input id="idBarang" name="idBarang"
-                       placeholder="🔍 Cari ID atau nama barang..."
-                       autocomplete="off"
-                       required>
-                <div id="salesProductDropdown" class="search-dropdown"></div>
+            <div class="sales-product-field">
+              <label for="salesSearch">Barang</label>
+              <div class="sales-product-picker" id="salesProductPicker">
+                <input id="salesSearch" type="text" autocomplete="off"
+                       placeholder="🔍 Cari nama barang...">
+                <input id="idBarang" name="idBarang" type="hidden">
+                <div id="salesProductList" class="sales-product-list" hidden></div>
               </div>
-              <div class="search-hint">Ketik ID atau nama barang untuk mencari.</div>
+              <div id="salesProductInfo" class="sales-product-info">Pilih barang dari daftar.</div>
             </div>
 
             <div>
