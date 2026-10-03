@@ -333,6 +333,74 @@
       font-size: 11px;
     }
 
+    .search-dropdown {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      z-index: 50;
+      max-height: 230px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #d7dce0;
+      border-radius: 9px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.10);
+    }
+
+    .search-dropdown.show {
+      display: block;
+    }
+
+    .search-option {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f1f2;
+      font-size: 13px;
+    }
+
+    .search-option:last-child {
+      border-bottom: 0;
+    }
+
+    .search-option:hover {
+      background: #f3f8f5;
+    }
+
+    .search-option strong {
+      color: var(--primary);
+      margin-right: 7px;
+    }
+
+    .search-option-main {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .search-option-stock {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .search-option-stock.safe {
+      color: #17603a;
+    }
+
+    .search-option-stock.warning {
+      color: #8a5a00;
+    }
+
+    .search-option-stock.empty {
+      color: #a63225;
+      font-weight: 700;
+    }
+
+    .searchable-wrap {
+      position: relative;
+    }
+
     .kas-cards {
       display: grid;
       grid-template-columns: repeat(3, minmax(0,1fr));
@@ -483,11 +551,10 @@
               <label for="idBarang">Barang</label>
               <div class="searchable-wrap">
                 <input id="idBarang" name="idBarang"
-                       list="salesProductList"
-                       placeholder="Cari ID atau nama barang..."
+                       placeholder="🔍 Cari ID atau nama barang..."
                        autocomplete="off"
                        required>
-                <datalist id="salesProductList"></datalist>
+                <div id="salesProductDropdown" class="search-dropdown"></div>
               </div>
               <div class="search-hint">Ketik ID atau nama barang untuk mencari.</div>
             </div>
@@ -544,11 +611,10 @@
               <label for="purchaseIdBarang">Barang</label>
               <div class="searchable-wrap">
                 <input id="purchaseIdBarang"
-                       list="purchaseProductList"
-                       placeholder="Cari ID atau nama barang..."
+                       placeholder="🔍 Cari ID atau nama barang..."
                        autocomplete="off"
                        required>
-                <datalist id="purchaseProductList"></datalist>
+                <div id="purchaseProductDropdown" class="search-dropdown"></div>
               </div>
               <div class="search-hint">Ketik ID atau nama barang untuk mencari.</div>
             </div>
@@ -692,7 +758,7 @@
 
         <div class="table-toolbar">
           <input id="stockSearch" type="search"
-                 placeholder="Cari ID atau nama barang..."
+                 placeholder="🔍 Cari ID atau nama barang..."
                  oninput="filterStok()">
           <div class="help" id="stockSummary">Memuat data stok...</div>
         </div>
@@ -888,22 +954,110 @@
 
       produkData = Array.isArray(hasil.data) ? hasil.data : [];
 
-      const salesList = document.getElementById("salesProductList");
-      const purchaseList = document.getElementById("purchaseProductList");
-
-      const options = produkData.map(item => {
-        const id = String(item.idBarang || "").trim();
-        const nama = String(item.namaBarang || "").trim();
-        return '<option value="' + escapeHtml(id) + '">[' +
-               escapeHtml(id) + '] ' + escapeHtml(nama) + '</option>';
-      }).join("");
-
-      if (salesList) salesList.innerHTML = options;
-      if (purchaseList) purchaseList.innerHTML = options;
+      setupSearchableBarang("idBarang", "salesProductDropdown");
+      setupSearchableBarang("purchaseIdBarang", "purchaseProductDropdown");
 
     } catch (error) {
       console.error("Gagal memuat daftar barang:", error);
     }
+  }
+
+  function setupSearchableBarang(inputId, dropdownId) {
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(dropdownId);
+
+    if (!input || !dropdown) return;
+
+    // Hindari memasang listener berkali-kali saat data dimuat ulang.
+    if (input.dataset.searchReady === "1") {
+      renderSearchOptions(input, dropdown);
+      return;
+    }
+
+    input.dataset.searchReady = "1";
+
+    input.addEventListener("focus", () => {
+      // Tetap kosong saat baru fokus.
+      dropdown.classList.remove("show");
+    });
+
+    input.addEventListener("input", () => {
+      const keyword = String(input.value || "").trim();
+
+      if (!keyword) {
+        dropdown.classList.remove("show");
+        return;
+      }
+
+      renderSearchOptions(input, dropdown);
+      dropdown.classList.add("show");
+    });
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        dropdown.classList.remove("show");
+      }
+    });
+
+    document.addEventListener("click", event => {
+      if (!input.parentElement.contains(event.target)) {
+        dropdown.classList.remove("show");
+      }
+    });
+  }
+
+  function renderSearchOptions(input, dropdown) {
+    const keyword = String(input.value || "").trim().toLowerCase();
+
+    const filtered = produkData.filter(item => {
+      const id = String(item.idBarang || "").toLowerCase();
+      const nama = String(item.namaBarang || "").toLowerCase();
+      return !keyword || id.includes(keyword) || nama.includes(keyword);
+    });
+
+    if (!filtered.length) {
+      dropdown.innerHTML =
+        '<div class="search-option">Barang tidak ditemukan.</div>';
+      return;
+    }
+
+    dropdown.innerHTML = filtered.map(item => {
+      const id = String(item.idBarang || "");
+      const nama = String(item.namaBarang || "");
+      const stok = Number(item.stokAkhir) || 0;
+      const minimum = Number(item.stokMinimum) || 0;
+
+      let stockClass = "safe";
+      if (stok <= 0) stockClass = "empty";
+      else if (stok <= minimum) stockClass = "warning";
+
+      const stockText = stok <= 0
+        ? "Sisa stok: HABIS"
+        : "Sisa stok: " + formatNumber(stok);
+
+      return `
+        <div class="search-option"
+             data-id="${escapeHtml(id)}"
+             data-name="${escapeHtml(nama)}">
+          <div class="search-option-main">
+            <strong>${escapeHtml(id)}</strong>
+            <span>${escapeHtml(nama)}</span>
+          </div>
+          <div class="search-option-stock ${stockClass}">
+            ${stockText}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    dropdown.querySelectorAll(".search-option[data-id]").forEach(option => {
+      option.addEventListener("mousedown", event => {
+        event.preventDefault();
+
+        input.value = option.dataset.id || "";
+        dropdown.classList.remove("show");
+      });
+    });
   }
 
   function normalisasiIdBarang(value) {
@@ -915,15 +1069,6 @@
     );
 
     if (exact) return String(exact.idBarang).trim();
-
-    const match = raw.match(/^\[?([^\]]+)\]?\s*[-–—:]\s*(.+)$/);
-    if (match) {
-      const candidate = match[1].trim();
-      const found = produkData.find(item =>
-        String(item.idBarang || "").trim().toLowerCase() === candidate.toLowerCase()
-      );
-      if (found) return String(found.idBarang).trim();
-    }
 
     const byName = produkData.find(item =>
       String(item.namaBarang || "").trim().toLowerCase() === raw.toLowerCase()
