@@ -354,6 +354,83 @@
       .cards { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
     }
+  
+
+  /* ============================================================
+     PENCARIAN BARANG - PENJUALAN
+     ============================================================ */
+  .sales-product-picker {
+    position: relative;
+  }
+
+  .sales-product-list {
+    position: absolute;
+    z-index: 50;
+    left: 0;
+    right: 0;
+    top: calc(100% + 4px);
+    max-height: 280px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #d7e2dc;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(0,0,0,.10);
+  }
+
+  .sales-product-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 0;
+    border-bottom: 1px solid #edf2ef;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .sales-product-option:last-child {
+    border-bottom: 0;
+  }
+
+  .sales-product-option:hover {
+    background: #f4faf6;
+  }
+
+  .sales-product-name {
+    font-weight: 600;
+    color: #172b22;
+  }
+
+  .sales-product-id {
+    margin-top: 3px;
+    font-size: 12px;
+    color: #6b7b73;
+  }
+
+  .sales-product-stock {
+    white-space: nowrap;
+    font-size: 12px;
+    color: #496057;
+  }
+
+  .sales-product-info {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #64756d;
+  }
+
+  .sales-product-info.selected {
+    color: #17653f;
+  }
+
+  .sales-product-info.warning {
+    color: #a05a00;
+  }
+
   </style>
 </head>
 
@@ -427,9 +504,15 @@
 
         <form id="salesForm">
           <div class="form-grid">
-            <div>
-              <label for="idBarang">ID Barang</label>
-              <input id="idBarang" name="idBarang" placeholder="Contoh: BRG001" required>
+            <div class="sales-product-field">
+              <label for="salesSearch">Barang</label>
+              <div class="sales-product-picker" id="salesProductPicker">
+                <input id="salesSearch" type="text" autocomplete="off"
+                       placeholder="🔍 Cari nama barang...">
+                <input id="idBarang" name="idBarang" type="hidden">
+                <div id="salesProductList" class="sales-product-list" hidden></div>
+              </div>
+              <div id="salesProductInfo" class="sales-product-info">Pilih barang dari daftar.</div>
             </div>
 
             <div>
@@ -701,6 +784,10 @@
       loadStok();
     }
 
+    if (pageName === "penjualan") {
+      loadSalesProducts();
+    }
+
     if (pageName === "dashboard") {
       loadDashboard();
     }
@@ -748,6 +835,133 @@
 
 
   // ============================================================
+  // DATA BARANG UNTUK PENJUALAN
+  // ============================================================
+
+  let salesProducts = [];
+  let salesProductsLoaded = false;
+
+  async function loadSalesProducts() {
+    if (salesProductsLoaded) return;
+
+    const searchInput = document.getElementById("salesSearch");
+    const list = document.getElementById("salesProductList");
+    const info = document.getElementById("salesProductInfo");
+
+    if (!searchInput || !list) return;
+
+    info.textContent = "Memuat daftar barang...";
+
+    try {
+      const response = await fetch(API_URL + "?action=getStok", { cache: "no-store" });
+      const hasil = await response.json();
+
+      if (hasil.status !== "success") {
+        throw new Error(hasil.message || "Gagal mengambil daftar barang.");
+      }
+
+      salesProducts = Array.isArray(hasil.data) ? hasil.data : [];
+      salesProductsLoaded = true;
+      info.textContent = salesProducts.length
+        ? "Ketik nama barang untuk mencari, lalu pilih dari daftar."
+        : "Belum ada data barang.";
+    } catch (error) {
+      info.textContent = "❌ Daftar barang gagal dimuat.";
+      console.error(error);
+    }
+  }
+
+  function renderSalesProductList(keyword = "") {
+    const list = document.getElementById("salesProductList");
+    if (!list) return;
+
+    const q = String(keyword || "").trim().toLowerCase();
+    const filtered = salesProducts.filter(item =>
+      String(item.namaBarang || "").toLowerCase().includes(q) ||
+      String(item.idBarang || "").toLowerCase().includes(q)
+    );
+
+    if (!filtered.length) {
+      list.innerHTML = '<div style="padding:14px;color:#6b7b73;">Barang tidak ditemukan.</div>';
+      list.hidden = false;
+      return;
+    }
+
+    list.innerHTML = filtered.map(item => {
+      const stok = Number(item.stokAkhir) || 0;
+      const status = String(item.status || "");
+      const stockText = stok > 0 ? `Stok: ${formatNumber(stok)}` : "Stok habis";
+
+      return `
+        <button type="button" class="sales-product-option" data-id="${escapeHtml(item.idBarang)}">
+          <span>
+            <span class="sales-product-name">${escapeHtml(item.namaBarang)}</span>
+            <span class="sales-product-id">${escapeHtml(item.idBarang)}</span>
+          </span>
+          <span class="sales-product-stock">${escapeHtml(stockText)}</span>
+        </button>`;
+    }).join("");
+
+    list.querySelectorAll(".sales-product-option").forEach(button => {
+      button.addEventListener("click", function() {
+        selectSalesProduct(this.dataset.id);
+      });
+    });
+
+    list.hidden = false;
+  }
+
+  function selectSalesProduct(idBarang) {
+    const item = salesProducts.find(x => String(x.idBarang) === String(idBarang));
+    if (!item) return;
+
+    document.getElementById("idBarang").value = item.idBarang;
+    document.getElementById("salesSearch").value = item.namaBarang;
+    document.getElementById("salesProductList").hidden = true;
+
+    const info = document.getElementById("salesProductInfo");
+    const stok = Number(item.stokAkhir) || 0;
+
+    if (stok <= 0) {
+      info.className = "sales-product-info warning";
+      info.textContent = `⚠️ ${item.namaBarang} sedang habis.`;
+    } else {
+      info.className = "sales-product-info selected";
+      info.textContent = `✓ ${item.namaBarang} dipilih • Stok tersedia: ${formatNumber(stok)}`;
+    }
+  }
+
+  function clearSalesProductSelection() {
+    document.getElementById("idBarang").value = "";
+    document.getElementById("salesProductInfo").className = "sales-product-info";
+    document.getElementById("salesProductInfo").textContent = "Pilih barang dari daftar.";
+  }
+
+  // ============================================================
+  // EVENT PENCARIAN BARANG
+  // ============================================================
+
+  document.getElementById("salesSearch").addEventListener("focus", async function() {
+    await loadSalesProducts();
+    renderSalesProductList(this.value);
+  });
+
+  document.getElementById("salesSearch").addEventListener("input", async function() {
+    clearSalesProductSelection();
+    await loadSalesProducts();
+    renderSalesProductList(this.value);
+  });
+
+  document.addEventListener("click", function(event) {
+    const picker = document.getElementById("salesProductPicker");
+    const list = document.getElementById("salesProductList");
+    if (picker && list && !picker.contains(event.target)) {
+      list.hidden = true;
+    }
+  });
+
+
+  // ============================================================
   // SIMPAN PENJUALAN
   // ============================================================
 
@@ -768,8 +982,18 @@
 
     if (!data.idBarang || data.qty <= 0) {
       result.className = "result error";
-      result.textContent = "ID barang dan jumlah penjualan wajib diisi.";
+      result.textContent = "Pilih barang dan isi jumlah penjualan terlebih dahulu.";
       return;
+    }
+
+    const selectedProduct = salesProducts.find(x => String(x.idBarang) === String(data.idBarang));
+    if (selectedProduct) {
+      const stokTersedia = Number(selectedProduct.stokAkhir) || 0;
+      if (data.qty > stokTersedia) {
+        result.className = "result error";
+        result.textContent = `❌ Stok ${selectedProduct.namaBarang} tidak mencukupi. Stok tersedia: ${formatNumber(stokTersedia)}.`;
+        return;
+      }
     }
 
     button.disabled = true;
@@ -801,6 +1025,10 @@ const hasil = await response.json();
           "Laba kotor: <strong>" + formatRupiah(hasil.labaKotor) + "</strong>";
 
         document.getElementById("salesForm").reset();
+        document.getElementById("salesProductInfo").className = "sales-product-info";
+        document.getElementById("salesProductInfo").textContent = "Pilih barang dari daftar.";
+        salesProductsLoaded = false;
+        salesProducts = [];
 
         // Perbarui Dashboard setelah transaksi berhasil.
         loadDashboard();
