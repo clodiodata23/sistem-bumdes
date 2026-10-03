@@ -319,6 +319,58 @@
       color: var(--muted);
     }
 
+    .searchable-wrap {
+      position: relative;
+    }
+
+    .searchable-wrap input {
+      padding-right: 38px;
+    }
+
+    .search-hint {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .kas-cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 15px;
+      margin-bottom: 18px;
+    }
+
+    .kas-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .kas-card .metric-value {
+      font-size: 21px;
+    }
+
+    .badge-in {
+      color: #17603a;
+      background: #edf8f1;
+    }
+
+    .badge-out {
+      color: #a63225;
+      background: #fff2f0;
+    }
+
+    .text-in {
+      color: #17603a;
+      font-weight: 700;
+    }
+
+    .text-out {
+      color: #a63225;
+      font-weight: 700;
+    }
+
     @media (max-width: 1000px) {
       .cards { grid-template-columns: repeat(2, minmax(0,1fr)); }
       .grid-2 { grid-template-columns: 1fr; }
@@ -428,8 +480,16 @@
         <form id="salesForm">
           <div class="form-grid">
             <div>
-              <label for="idBarang">ID Barang</label>
-              <input id="idBarang" name="idBarang" placeholder="Contoh: BRG001" required>
+              <label for="idBarang">Barang</label>
+              <div class="searchable-wrap">
+                <input id="idBarang" name="idBarang"
+                       list="salesProductList"
+                       placeholder="Cari ID atau nama barang..."
+                       autocomplete="off"
+                       required>
+                <datalist id="salesProductList"></datalist>
+              </div>
+              <div class="search-hint">Ketik ID atau nama barang untuk mencari.</div>
             </div>
 
             <div>
@@ -481,8 +541,16 @@
         <form id="purchaseForm">
           <div class="form-grid">
             <div>
-              <label for="purchaseIdBarang">ID Barang</label>
-              <input id="purchaseIdBarang" placeholder="Contoh: BRG001" required>
+              <label for="purchaseIdBarang">Barang</label>
+              <div class="searchable-wrap">
+                <input id="purchaseIdBarang"
+                       list="purchaseProductList"
+                       placeholder="Cari ID atau nama barang..."
+                       autocomplete="off"
+                       required>
+                <datalist id="purchaseProductList"></datalist>
+              </div>
+              <div class="search-hint">Ketik ID atau nama barang untuk mencari.</div>
             </div>
 
             <div>
@@ -664,16 +732,16 @@
           <button class="btn btn-secondary" type="button" onclick="loadKas()">↻ Refresh Kas</button>
         </div>
 
-        <div class="cards" style="margin-bottom:18px;">
-          <div class="card">
+        <div class="kas-cards">
+          <div class="kas-card">
             <div class="metric-label">Total Kas Masuk</div>
-            <div class="metric-value" id="kasTotalMasuk">Rp0</div>
+            <div class="metric-value text-in" id="kasTotalMasuk">Rp0</div>
           </div>
-          <div class="card">
+          <div class="kas-card">
             <div class="metric-label">Total Kas Keluar</div>
-            <div class="metric-value" id="kasTotalKeluar">Rp0</div>
+            <div class="metric-value text-out" id="kasTotalKeluar">Rp0</div>
           </div>
-          <div class="card">
+          <div class="kas-card">
             <div class="metric-label">Saldo Akhir</div>
             <div class="metric-value" id="kasSaldoAkhir">Rp0</div>
           </div>
@@ -681,7 +749,7 @@
 
         <div class="table-toolbar">
           <input id="kasSearch" type="search"
-                 placeholder="Cari keterangan, kategori, ID, atau referensi..."
+                 placeholder="Cari ID, kategori, keterangan, atau referensi..."
                  oninput="filterKas()">
           <div class="help" id="kasSummary">Memuat data kas...</div>
         </div>
@@ -749,12 +817,12 @@
       loadStok();
     }
 
-    if (pageName === "dashboard") {
-      loadDashboard();
-    }
-
     if (pageName === "kas") {
       loadKas();
+    }
+
+    if (pageName === "dashboard") {
+      loadDashboard();
     }
   }
 
@@ -800,6 +868,72 @@
 
 
   // ============================================================
+  // DATA BARANG UNTUK PENCARIAN PENJUALAN / BARANG MASUK
+  // ============================================================
+
+  let produkData = [];
+
+  async function loadProdukUntukForm() {
+    try {
+      const response = await fetch(API_URL + "?action=getStok&ts=" + Date.now(), {
+        method: "GET",
+        cache: "no-store"
+      });
+
+      const hasil = await response.json();
+
+      if (hasil.status !== "success") {
+        throw new Error(hasil.message || "Gagal mengambil daftar barang.");
+      }
+
+      produkData = Array.isArray(hasil.data) ? hasil.data : [];
+
+      const salesList = document.getElementById("salesProductList");
+      const purchaseList = document.getElementById("purchaseProductList");
+
+      const options = produkData.map(item => {
+        const id = String(item.idBarang || "").trim();
+        const nama = String(item.namaBarang || "").trim();
+        return '<option value="' + escapeHtml(id) + '">[' +
+               escapeHtml(id) + '] ' + escapeHtml(nama) + '</option>';
+      }).join("");
+
+      if (salesList) salesList.innerHTML = options;
+      if (purchaseList) purchaseList.innerHTML = options;
+
+    } catch (error) {
+      console.error("Gagal memuat daftar barang:", error);
+    }
+  }
+
+  function normalisasiIdBarang(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+
+    const exact = produkData.find(item =>
+      String(item.idBarang || "").trim().toLowerCase() === raw.toLowerCase()
+    );
+
+    if (exact) return String(exact.idBarang).trim();
+
+    const match = raw.match(/^\[?([^\]]+)\]?\s*[-–—:]\s*(.+)$/);
+    if (match) {
+      const candidate = match[1].trim();
+      const found = produkData.find(item =>
+        String(item.idBarang || "").trim().toLowerCase() === candidate.toLowerCase()
+      );
+      if (found) return String(found.idBarang).trim();
+    }
+
+    const byName = produkData.find(item =>
+      String(item.namaBarang || "").trim().toLowerCase() === raw.toLowerCase()
+    );
+
+    return byName ? String(byName.idBarang).trim() : raw;
+  }
+
+
+  // ============================================================
   // SIMPAN PENJUALAN
   // ============================================================
 
@@ -811,7 +945,7 @@
 
     const data = {
       action: "simpanPenjualan",
-      idBarang: document.getElementById("idBarang").value.trim(),
+      idBarang: normalisasiIdBarang(document.getElementById("idBarang").value),
       qty: Number(document.getElementById("qty").value),
       pembayaran: document.getElementById("pembayaran").value,
       keterangan: document.getElementById("keterangan").value.trim(),
@@ -853,9 +987,11 @@ const hasil = await response.json();
           "Laba kotor: <strong>" + formatRupiah(hasil.labaKotor) + "</strong>";
 
         document.getElementById("salesForm").reset();
+        loadProdukUntukForm();
 
-        // Perbarui Dashboard setelah transaksi berhasil.
+        // Perbarui Dashboard dan Kas setelah transaksi berhasil.
         loadDashboard();
+        if (typeof loadKas === "function") loadKas();
 
       } else {
         throw new Error(hasil.message || "Gagal menyimpan transaksi.");
@@ -889,7 +1025,7 @@ const hasil = await response.json();
 
     const data = {
       action: "simpanBarangMasuk",
-      idBarang: document.getElementById("purchaseIdBarang").value.trim(),
+      idBarang: normalisasiIdBarang(document.getElementById("purchaseIdBarang").value),
       qty: Number(qtyInput),
       jumlah: Number(qtyInput),
       supplier: document.getElementById("purchaseSupplier").value.trim(),
@@ -943,9 +1079,11 @@ const hasil = await response.json();
         "Total pembelian: <strong>" + formatRupiah(hasil.totalPembelian) + "</strong>";
 
       document.getElementById("purchaseForm").reset();
+      loadProdukUntukForm();
 
-      // Perbarui Dashboard setelah barang masuk berhasil.
+      // Perbarui Dashboard dan Kas setelah barang masuk berhasil.
       loadDashboard();
+      if (typeof loadKas === "function") loadKas();
 
       // Jika halaman Stok sudah pernah dibuka, muat ulang datanya.
       if (typeof loadStok === "function") {
@@ -1023,8 +1161,9 @@ const hasil = await response.json();
 
       document.getElementById("expenseForm").reset();
 
-      // Perbarui Dashboard agar Pengeluaran dan Laba Bersih langsung berubah.
+      // Perbarui Dashboard dan Kas agar langsung berubah.
       loadDashboard();
+      if (typeof loadKas === "function") loadKas();
 
     } catch (error) {
       result.className = "result error";
@@ -1187,7 +1326,6 @@ const hasil = await response.json();
       .replace(/'/g, "&#039;");
   }
 
-
   // ============================================================
   // DATA KAS
   // ============================================================
@@ -1221,12 +1359,16 @@ const hasil = await response.json();
 
       kasData = Array.isArray(hasil.data) ? hasil.data : [];
 
-      const s = hasil.summary || {};
-      document.getElementById("kasTotalMasuk").textContent = formatRupiah(s.totalMasuk);
-      document.getElementById("kasTotalKeluar").textContent = formatRupiah(s.totalKeluar);
-      document.getElementById("kasSaldoAkhir").textContent = formatRupiah(s.saldoAkhir);
+      const summaryData = hasil.summary || {};
+      document.getElementById("kasTotalMasuk").textContent =
+        formatRupiah(summaryData.totalMasuk);
+      document.getElementById("kasTotalKeluar").textContent =
+        formatRupiah(summaryData.totalKeluar);
+      document.getElementById("kasSaldoAkhir").textContent =
+        formatRupiah(summaryData.saldoAkhir);
 
       renderKas(kasData);
+
     } catch (error) {
       tbody.innerHTML =
         '<tr><td colspan="9" class="empty-state">❌ Gagal mengambil data kas.</td></tr>';
@@ -1240,6 +1382,7 @@ const hasil = await response.json();
   function renderKas(data) {
     const tbody = document.getElementById("kasTableBody");
     const summary = document.getElementById("kasSummary");
+
     if (!tbody) return;
 
     if (!data.length) {
@@ -1249,26 +1392,29 @@ const hasil = await response.json();
       return;
     }
 
-    tbody.innerHTML = data.slice().reverse().map(item => {
+    tbody.innerHTML = data.map(item => {
       const jenis = String(item.jenis || "").toUpperCase();
-      const badgeClass = jenis === "MASUK" ? "badge-safe" :
-                         jenis === "KELUAR" ? "badge-danger" : "badge-empty";
+      const masuk = Number(item.debit) || 0;
+      const keluar = Number(item.kredit) || 0;
+
+      const badgeClass = jenis === "MASUK" ? "badge-in" : "badge-out";
+      const badgeText = jenis || "—";
 
       return `
         <tr>
-          <td>${escapeHtml(item.idKas)}</td>
+          <td><strong>${escapeHtml(item.idKas)}</strong></td>
           <td>${escapeHtml(item.tanggal)}</td>
-          <td><span class="badge ${badgeClass}">${escapeHtml(jenis || "—")}</span></td>
+          <td><span class="badge ${badgeClass}">${escapeHtml(badgeText)}</span></td>
           <td>${escapeHtml(item.kategori)}</td>
-          <td><strong>${escapeHtml(item.keterangan)}</strong></td>
-          <td>${item.debit > 0 ? formatRupiah(item.debit) : "—"}</td>
-          <td>${item.kredit > 0 ? formatRupiah(item.kredit) : "—"}</td>
-          <td class="stock-number">${formatRupiah(item.saldo)}</td>
-          <td>${escapeHtml(item.referensi || "—")}</td>
+          <td>${escapeHtml(item.keterangan)}</td>
+          <td class="text-in">${masuk > 0 ? formatRupiah(masuk) : "—"}</td>
+          <td class="text-out">${keluar > 0 ? formatRupiah(keluar) : "—"}</td>
+          <td><strong>${formatRupiah(item.saldo)}</strong></td>
+          <td>${escapeHtml(item.referensi)}</td>
         </tr>`;
     }).join("");
 
-    summary.textContent = `${data.length} transaksi kas`;
+    summary.textContent = data.length + " transaksi";
   }
 
   function filterKas() {
@@ -1291,6 +1437,7 @@ const hasil = await response.json();
     renderKas(filtered);
   }
 
+
   // ============================================================
   // FORMAT RUPIAH
   // ============================================================
@@ -1310,6 +1457,7 @@ const hasil = await response.json();
 
   cekKoneksi();
   loadDashboard();
+  loadProdukUntukForm();
 </script>
 
 </body>
