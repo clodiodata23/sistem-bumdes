@@ -1036,8 +1036,11 @@ const hasil = await response.json();
         salesProductsLoaded = false;
         salesProducts = [];
 
-        // Perbarui Dashboard setelah transaksi berhasil.
-        loadDashboard();
+        // Perbarui semua data yang terlihat tanpa reload browser.
+        await loadDashboard();
+
+        // Muat ulang daftar barang agar stok pada pencarian langsung berubah.
+        await loadSalesProducts();
 
       } else {
         throw new Error(hasil.message || "Gagal menyimpan transaksi.");
@@ -1243,13 +1246,16 @@ const hasil = await response.json();
       document.getElementById("purchaseForm").reset();
       clearPurchaseProductSelection();
 
-      // Perbarui Dashboard setelah barang masuk berhasil.
-      loadDashboard();
+      // Perbarui semua data yang terlihat tanpa reload browser.
+      await loadDashboard();
 
-      // Jika halaman Stok sudah pernah dibuka, muat ulang datanya.
+      // Perbarui stok jika halaman Stok sudah pernah dibuka.
       if (typeof loadStok === "function") {
-        loadStok();
+        await loadStok();
       }
+
+      // Muat ulang daftar barang agar stok pada pencarian langsung berubah.
+      await loadPurchaseProducts();
 
     } catch (error) {
       result.className = "result error";
