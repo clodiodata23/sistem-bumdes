@@ -1571,7 +1571,7 @@
               <div>
                 <label for="masterStokAwal">Stok Awal</label>
                 <input id="masterStokAwal" type="number" min="0" step="1" placeholder="Contoh: 10" required>
-                <div class="help">Saat edit, stok awal tidak diubah.</div>
+                <div class="help">Stok awal dapat diubah saat edit. Stok akhir akan dihitung ulang berdasarkan stok awal + barang masuk - terjual.</div>
               </div>
               <div>
                 <label for="masterStokMinimum">Stok Minimum</label>
@@ -3229,7 +3229,7 @@ const hasil = await response.json();
 
     document.getElementById("masterIdBarang").disabled = true;
     document.getElementById("masterHargaBeli").disabled = true;
-    document.getElementById("masterStokAwal").disabled = true;
+    document.getElementById("masterStokAwal").disabled = false;
     document.getElementById("masterAktifField").style.display = "block";
     document.getElementById("masterFormTitle").textContent = "Edit Barang";
     document.getElementById("masterBarangButton").textContent = "Simpan Perubahan";
@@ -3313,7 +3313,7 @@ const hasil = await response.json();
       // --------------------------------------------------------
       // 1. UPDATE MASTER BARANG
       // Harga beli/HPP TIDAK diubah saat edit.
-      // Stok awal juga TIDAK diubah.
+      // Stok awal dapat diubah saat edit.
       // --------------------------------------------------------
 
       const { error: errorEdit } =
@@ -3336,14 +3336,14 @@ const hasil = await response.json();
 
 
       // --------------------------------------------------------
-      // 2. UPDATE BATAS MINIMUM DI STOK
-      // Stok berjalan TIDAK disentuh.
+      // 2. UPDATE STOK
+      // Stok akhir dihitung ulang dari: stok awal + barang masuk - terjual.
       // --------------------------------------------------------
 
       const { data: dataStok, error: errorAmbilStok } =
         await supabaseClient
           .from("stok")
-          .select("stok_akhir")
+          .select("stok_awal, barang_masuk, terjual")
           .eq("id_barang", editId)
           .maybeSingle();
 
@@ -3355,7 +3355,9 @@ const hasil = await response.json();
       // dan status stok berdasarkan stok berjalan.
       if (dataStok) {
 
-        const stokAkhir = Number(dataStok.stok_akhir || 0);
+        const barangMasuk = Number(dataStok.barang_masuk || 0);
+        const terjual = Number(dataStok.terjual || 0);
+        const stokAkhir = stokAwal + barangMasuk - terjual;
 
         const statusStok =
           stokAkhir <= 0
@@ -3368,7 +3370,10 @@ const hasil = await response.json();
           await supabaseClient
             .from("stok")
             .update({
+              nama_barang: namaBarang,
+              stok_awal: stokAwal,
               stok_minimum: stokMinimum,
+              stok_akhir: stokAkhir,
               status: statusStok
             })
             .eq("id_barang", editId);
@@ -3472,6 +3477,7 @@ const hasil = await response.json();
         .from("stok")
         .insert({
           id_barang: idBarang,
+          nama_barang: namaBarang,
           stok_awal: stokAwal,
           barang_masuk: 0,
           terjual: 0,
