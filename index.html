@@ -536,6 +536,26 @@
 
 
 
+
+
+    .report-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    @media print {
+      .sidebar, .topbar, .report-actions, #laporanMulai, #laporanSelesai,
+      #laporanResult { display: none !important; }
+      .main { margin-left: 0; width: 100%; padding: 0; }
+      .page { display: none !important; }
+      #page-laporan { display: block !important; }
+      #page-laporan > .panel { border: 0; padding: 0; }
+      .table-wrap { overflow: visible; }
+      table { min-width: 0; }
+    }
+
     /* TABEL STOK */
 
     .table-toolbar {
@@ -865,6 +885,10 @@
 
 
   </style>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
 
 </head>
 
@@ -1527,7 +1551,10 @@
             <h2 class="section-title" style="margin-bottom:5px;">Laporan</h2>
             <div class="help">Ringkasan transaksi berdasarkan periode tanggal.</div>
           </div>
-          <button class="btn btn-secondary" type="button" onclick="loadLaporan()">↻ Perbarui Laporan</button>
+          <div class="report-actions">
+            <button class="btn btn-secondary" type="button" onclick="loadLaporan()">↻ Perbarui Laporan</button>
+            <button class="btn btn-primary" type="button" onclick="downloadLaporanPDF()">📄 Download PDF</button>
+          </div>
         </div>
 
         <div class="form-grid" style="margin-bottom:18px;">
@@ -3200,6 +3227,7 @@ const hasil = await response.json();
   // ============================================================
 
   let laporanData = { penjualan: [], pembelian: [], pengeluaran: [] };
+  let laporanTerfilter = { penjualan: [], pembelian: [], pengeluaran: [] };
 
   function tanggalHariIniISO() {
     const d = new Date();
@@ -3243,6 +3271,7 @@ const hasil = await response.json();
     const penjualan = laporanData.penjualan.filter(cocok);
     const pembelian = laporanData.pembelian.filter(cocok);
     const pengeluaran = laporanData.pengeluaran.filter(cocok);
+    laporanTerfilter = { penjualan, pembelian, pengeluaran };
     const totalPenjualan = penjualan.reduce((s, x) => s + Number(x.total || 0), 0);
     const totalPembelian = pembelian.reduce((s, x) => s + Number(x.total || 0), 0);
     const totalPengeluaran = pengeluaran.reduce((s, x) => s + Number(x.jumlah || 0), 0);
@@ -3278,6 +3307,129 @@ const hasil = await response.json();
     document.getElementById("lapPengeluaranSummary").textContent = data.length + " transaksi";
     if (!data.length) { body.innerHTML = '<tr><td colspan="6" class="empty-state">Tidak ada pengeluaran pada periode ini.</td></tr>'; return; }
     body.innerHTML = data.map(x => `<tr><td>${escapeHtml(x.id || "-")}</td><td>${escapeHtml(formatLaporanDate(x.tanggal))}</td><td>${escapeHtml(x.kategori || "-")}</td><td>${escapeHtml(x.keterangan || "-")}</td><td>${escapeHtml(x.pembayaran || "-")}</td><td>${formatRupiah(Number(x.jumlah || 0))}</td></tr>`).join("");
+  }
+
+  // ============================================================
+  // DOWNLOAD LAPORAN PDF
+  // ============================================================
+
+  function downloadLaporanPDF() {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("Library PDF belum siap. Pastikan koneksi internet aktif, lalu coba lagi.");
+      return;
+    }
+
+    const mulai = document.getElementById("laporanMulai").value || "";
+    const selesai = document.getElementById("laporanSelesai").value || "";
+    if (mulai && selesai && mulai > selesai) {
+      alert("Tanggal mulai tidak boleh lebih besar dari tanggal selesai.");
+      return;
+    }
+
+    const { penjualan, pembelian, pengeluaran } = laporanTerfilter;
+    const totalPenjualan = penjualan.reduce((s, x) => s + Number(x.total || 0), 0);
+    const totalPembelian = pembelian.reduce((s, x) => s + Number(x.total || 0), 0);
+    const totalPengeluaran = pengeluaran.reduce((s, x) => s + Number(x.jumlah || 0), 0);
+    const labaKotor = penjualan.reduce((s, x) => s + Number(x.laba || 0), 0);
+    const labaBersih = labaKotor - totalPengeluaran;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("p", "mm", "a4");
+    const margin = 14;
+    let y = 16;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.text("LAPORAN KEUANGAN BUMDes", margin, y);
+    y += 7;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Sistem Kas & Inventori", margin, y);
+    y += 6;
+    doc.text(`Periode: ${mulai ? formatLaporanDate(mulai) : "Semua"} s.d. ${selesai ? formatLaporanDate(selesai) : "Semua"}`, margin, y);
+    y += 8;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Ringkasan", margin, y);
+    y += 5;
+
+    doc.autoTable({
+      startY: y,
+      head: [["Penjualan", "Pembelian", "Pengeluaran", "Laba Bersih"]],
+      body: [[formatRupiah(totalPenjualan), formatRupiah(totalPembelian), formatRupiah(totalPengeluaran), formatRupiah(labaBersih)]],
+      theme: "grid",
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fontStyle: "bold" },
+      margin: { left: margin, right: margin }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    function addTable(title, head, rows, emptyCols) {
+      if (y > 265) { doc.addPage(); y = 16; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(title, margin, y);
+      y += 2;
+      doc.autoTable({
+        startY: y,
+        head: [head],
+        body: rows.length ? rows : [emptyCols],
+        theme: "striped",
+        styles: { fontSize: 7.5, cellPadding: 2.2, overflow: "linebreak" },
+        headStyles: { fontStyle: "bold" },
+        margin: { left: margin, right: margin }
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+
+    addTable(
+      `Penjualan (${penjualan.length} transaksi)`,
+      ["ID", "Tanggal", "Barang", "Qty", "Total", "HPP", "Laba Kotor"],
+      penjualan.map(x => [
+        String(x.id || "-"), formatLaporanDate(x.tanggal),
+        String(x.namaBarang || x.idBarang || "-"), String(Number(x.qty || 0)),
+        formatRupiah(Number(x.total || 0)), formatRupiah(Number(x.hpp || 0)),
+        formatRupiah(Number(x.laba || 0))
+      ]),
+      ["-", "-", "Tidak ada transaksi", "-", "-", "-", "-"]
+    );
+
+    addTable(
+      `Pembelian (${pembelian.length} transaksi)`,
+      ["ID", "Tanggal", "Barang", "Supplier", "Qty", "Total"],
+      pembelian.map(x => [
+        String(x.id || "-"), formatLaporanDate(x.tanggal),
+        String(x.namaBarang || x.idBarang || "-"), String(x.supplier || "-"),
+        String(Number(x.qty || 0)), formatRupiah(Number(x.total || 0))
+      ]),
+      ["-", "-", "Tidak ada transaksi", "-", "-", "-"]
+    );
+
+    addTable(
+      `Pengeluaran (${pengeluaran.length} transaksi)`,
+      ["ID", "Tanggal", "Kategori", "Keterangan", "Metode", "Jumlah"],
+      pengeluaran.map(x => [
+        String(x.id || "-"), formatLaporanDate(x.tanggal),
+        String(x.kategori || "-"), String(x.keterangan || "-"),
+        String(x.pembayaran || "-"), formatRupiah(Number(x.jumlah || 0))
+      ]),
+      ["-", "-", "Tidak ada transaksi", "-", "-", "-"]
+    );
+
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text(
+        `BUMDes • Laporan ${mulai ? formatLaporanDate(mulai) : "Semua"} s.d. ${selesai ? formatLaporanDate(selesai) : "Semua"} • Halaman ${i}/${pageCount}`,
+        margin, 291
+      );
+    }
+
+    const suffix = selesai || mulai || tanggalHariIniISO();
+    doc.save(`Laporan-BUMDes-${suffix}.pdf`);
   }
 
   function formatLaporanDate(value) {
