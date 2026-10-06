@@ -987,6 +987,191 @@
     .welcome-logo.its { width: 125px; }
     .welcome-inner { padding: 25px 12px; }
   }
+
+
+/* ============================================================
+   MOBILE FIX v2
+   HANYA CSS — DATA & JAVASCRIPT TIDAK DIUBAH
+   ============================================================ */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.app,
+.main,
+.page,
+.panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 700px) {
+  .main {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 14px 12px 24px;
+  }
+
+  .topbar {
+    width: 100%;
+    box-sizing: border-box;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .topbar > div:first-child {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .topbar h1 {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .topbar p {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .panel {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 14px;
+  }
+
+  /* Semua kartu ringkasan menjadi satu kolom di HP.
+     Desktop tidak berubah. */
+  .cards {
+    grid-template-columns: 1fr !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .card {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .metric-value {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Khusus halaman Kas: tiga kartu Kas tidak boleh keluar layar. */
+  #page-kas .cards {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  /* Toolbar/form menjadi satu kolom. */
+  .table-toolbar,
+  .form-grid {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .table-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .table-toolbar > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Tabel boleh digeser ke samping, tetapi halaman tidak ikut melebar. */
+  .table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 720px;
+  }
+
+  /* Splash/welcome tetap proporsional di HP. */
+  .welcome-inner {
+    width: 92vw;
+    max-width: 560px;
+    padding: 28px 16px;
+    box-sizing: border-box;
+  }
+
+  .welcome-logos {
+    gap: 12px;
+    margin-bottom: 22px;
+    flex-wrap: nowrap;
+  }
+
+  .welcome-logo {
+    width: clamp(58px, 18vw, 95px);
+    height: clamp(58px, 18vw, 95px);
+  }
+
+  .welcome-logo.its {
+    width: clamp(90px, 28vw, 150px);
+  }
+
+  .welcome-title {
+    font-size: clamp(24px, 7vw, 34px);
+  }
+
+  .welcome-subtitle {
+    font-size: clamp(16px, 4.5vw, 22px);
+    line-height: 1.35;
+  }
+
+  .welcome-credit {
+    font-size: 13px;
+  }
+
+  .welcome-credit strong {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 420px) {
+  .main {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+
+  .panel {
+    padding: 11px;
+  }
+
+  .welcome-logos {
+    gap: 7px;
+  }
+
+  .welcome-logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .welcome-logo.its {
+    width: 92px;
+  }
+}
+
 </style>
 
 </head>
