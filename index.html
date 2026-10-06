@@ -3275,14 +3275,6 @@ const hasil = await response.json();
   const result = document.getElementById("masterBarangResult");
   const editId = document.getElementById("masterEditId").value.trim();
 
-  // Untuk tahap ini kita hanya pindahkan TAMBAH BARANG.
-  // Edit akan kita pindahkan setelah tambah berhasil.
-  if (editId) {
-    result.className = "result error";
-    result.textContent = "⚠️ Fungsi edit kita pindahkan ke Supabase pada langkah berikutnya.";
-    return;
-  }
-
   const namaBarang = document.getElementById("masterNamaBarang").value.trim();
   const kategori = document.getElementById("masterKategori").value.trim();
   const satuan = document.getElementById("masterSatuan").value.trim();
@@ -3303,9 +3295,19 @@ const hasil = await response.json();
     document.getElementById("masterStokMinimum").value || 0
   );
 
+  const statusElement = document.getElementById("masterStatus");
+  const status = statusElement
+    ? statusElement.value
+    : "AKTIF";
+
+  // ==========================================================
+  // VALIDASI
+  // ==========================================================
+
   if (!namaBarang || !kategori || !satuan) {
     result.className = "result error";
-    result.textContent = "❌ Nama, kategori, dan satuan wajib diisi.";
+    result.textContent =
+      "❌ Nama, kategori, dan satuan wajib diisi.";
     return;
   }
 
@@ -3316,20 +3318,127 @@ const hasil = await response.json();
     stokMinimum < 0
   ) {
     result.className = "result error";
-    result.textContent = "❌ Nilai harga dan stok tidak boleh negatif.";
+    result.textContent =
+      "❌ Nilai harga dan stok tidak boleh negatif.";
     return;
   }
 
   button.disabled = true;
-  button.textContent = "Menambahkan...";
+  button.textContent = editId
+    ? "Menyimpan Perubahan..."
+    : "Menambahkan...";
+
   result.className = "result";
-  result.textContent = "Menyimpan ke Supabase...";
+  result.textContent = editId
+    ? "Menyimpan perubahan ke Supabase..."
+    : "Menyimpan barang ke Supabase...";
 
   try {
 
     // ==========================================================
-    // 1. BUAT KODE BARANG OTOMATIS
+    // MODE EDIT
     // ==========================================================
+
+    if (editId) {
+
+      // --------------------------------------------------------
+      // 1. UPDATE MASTER BARANG
+      // Harga beli/HPP TIDAK diubah saat edit.
+      // Stok awal juga TIDAK diubah.
+      // --------------------------------------------------------
+
+      const { error: errorEdit } =
+        await supabaseClient
+          .from("master_barang")
+          .update({
+            nama_barang: namaBarang,
+            kategori: kategori,
+            satuan: satuan,
+            harga_jual: hargaJual,
+            stok_minimum: stokMinimum,
+            status: status,
+            aktif: status === "AKTIF"
+          })
+          .eq("id_barang", editId);
+
+      if (errorEdit) {
+        throw errorEdit;
+      }
+
+
+      // --------------------------------------------------------
+      // 2. UPDATE BATAS MINIMUM DI STOK
+      // Stok berjalan TIDAK disentuh.
+      // --------------------------------------------------------
+
+      const { data: dataStok, error: errorAmbilStok } =
+        await supabaseClient
+          .from("stok")
+          .select("stok_akhir")
+          .eq("id_barang", editId)
+          .maybeSingle();
+
+      if (errorAmbilStok) {
+        throw errorAmbilStok;
+      }
+
+      // Jika data stok ditemukan, perbarui stok_minimum
+      // dan status stok berdasarkan stok berjalan.
+      if (dataStok) {
+
+        const stokAkhir = Number(dataStok.stok_akhir || 0);
+
+        const statusStok =
+          stokAkhir <= 0
+            ? "HABIS"
+            : stokAkhir <= stokMinimum
+              ? "MENIPIS"
+              : "AMAN";
+
+        const { error: errorUpdateStok } =
+          await supabaseClient
+            .from("stok")
+            .update({
+              stok_minimum: stokMinimum,
+              status: statusStok
+            })
+            .eq("id_barang", editId);
+
+        if (errorUpdateStok) {
+          throw errorUpdateStok;
+        }
+      }
+
+      // --------------------------------------------------------
+      // 3. BERHASIL EDIT
+      // --------------------------------------------------------
+
+      result.className = "result success";
+      result.textContent =
+        "✅ Barang " + editId + " berhasil diperbarui.";
+
+      resetMasterBarangForm();
+
+      await loadMasterBarang();
+
+      // Bersihkan cache daftar barang transaksi.
+      salesProductsLoaded = false;
+      salesProducts = [];
+
+      purchaseProductsLoaded = false;
+      purchaseProducts = [];
+
+      return;
+    }
+
+
+    // ==========================================================
+    // MODE TAMBAH BARANG
+    // ==========================================================
+
+    // ----------------------------------------------------------
+    // 1. BUAT KODE BARANG OTOMATIS
+    // ----------------------------------------------------------
 
     const { data: daftarBarang, error: errorKode } =
       await supabaseClient
@@ -3343,7 +3452,9 @@ const hasil = await response.json();
     let nomorTerakhir = 0;
 
     (daftarBarang || []).forEach(item => {
+
       const kode = String(item.id_barang || "").trim();
+
       const cocok = kode.match(/^BRG(\d+)$/i);
 
       if (cocok) {
@@ -3358,11 +3469,11 @@ const hasil = await response.json();
       "BRG" + String(nomorTerakhir + 1).padStart(3, "0");
 
 
-    // ==========================================================
+    // ----------------------------------------------------------
     // 2. SIMPAN MASTER BARANG
-    // ==========================================================
+    // ----------------------------------------------------------
 
-    const { data: barangBaru, error: errorBarang } =
+    const { error: errorBarang } =
       await supabaseClient
         .from("master_barang")
         .insert({
@@ -3376,18 +3487,16 @@ const hasil = await response.json();
           stok_minimum: stokMinimum,
           status: "AKTIF",
           aktif: true
-        })
-        .select()
-        .single();
+        });
 
     if (errorBarang) {
       throw errorBarang;
     }
 
 
-    // ==========================================================
+    // ----------------------------------------------------------
     // 3. SIMPAN STOK AWAL
-    // ==========================================================
+    // ----------------------------------------------------------
 
     const { error: errorStok } =
       await supabaseClient
@@ -3408,8 +3517,7 @@ const hasil = await response.json();
         });
 
     if (errorStok) {
-      // Master barang sudah tersimpan.
-      // Kita beri pesan jelas agar tidak diam-diam gagal.
+
       throw new Error(
         "Master barang tersimpan, tetapi stok gagal disimpan: " +
         errorStok.message
@@ -3417,13 +3525,14 @@ const hasil = await response.json();
     }
 
 
-    // ==========================================================
-    // 4. BERHASIL
-    // ==========================================================
+    // ----------------------------------------------------------
+    // 4. BERHASIL TAMBAH
+    // ----------------------------------------------------------
 
     result.className = "result success";
     result.textContent =
-      "✅ Barang " + idBarang + " berhasil ditambahkan ke Supabase.";
+      "✅ Barang " + idBarang +
+      " berhasil ditambahkan ke Supabase.";
 
     resetMasterBarangForm();
 
@@ -3436,20 +3545,28 @@ const hasil = await response.json();
     purchaseProductsLoaded = false;
     purchaseProducts = [];
 
+
   } catch (error) {
 
-    console.error("SUPABASE TAMBAH BARANG ERROR:", error);
+    console.error(
+      "SUPABASE MASTER BARANG ERROR:",
+      error
+    );
 
     result.className = "result error";
+
     result.textContent =
-      "❌ " + (error.message || "Gagal menyimpan barang.");
+      "❌ " +
+      (error.message || "Gagal menyimpan barang.");
 
   } finally {
 
     button.disabled = false;
-    button.textContent = "Simpan Barang";
 
+    button.textContent =
+      "Simpan Barang";
   }
+
 });
 
   async function toggleMasterBarang(idBarang, aktif) {
