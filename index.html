@@ -3570,47 +3570,54 @@ const hasil = await response.json();
 });
 
   async function toggleMasterBarang(idBarang, aktif) {
-    const aksi = aktif ? "mengaktifkan" : "menonaktifkan";
-    if (!confirm(`Yakin ingin ${aksi} barang ${idBarang}?`)) return;
+  const aksi = aktif ? "mengaktifkan" : "menonaktifkan";
 
-    const result = document.getElementById("masterBarangResult");
-    result.className = "result";
-    result.textContent = "";
-
-    try {
-      const params = new URLSearchParams({
-        action: "ubahStatusBarang",
-        idBarang: idBarang,
-        aktif: String(aktif)
-      });
-
-      const response = await fetch(API_URL + "?" + params.toString(), {
-        method: "GET",
-        cache: "no-store"
-      });
-      const hasil = await response.json();
-
-      if (hasil.status !== "success") {
-        throw new Error(hasil.message || "Gagal mengubah status barang.");
-      }
-
-      result.className = "result success";
-      result.textContent = "✅ " + hasil.message;
-
-      salesProductsLoaded = false;
-      salesProducts = [];
-      purchaseProductsLoaded = false;
-      purchaseProducts = [];
-
-      await loadMasterBarang();
-      await loadDashboard();
-
-    } catch (error) {
-      result.className = "result error";
-      result.textContent = "❌ " + error.message;
-      console.error(error);
-    }
+  if (!confirm(`Yakin ingin ${aksi} barang ${idBarang}?`)) {
+    return;
   }
+
+  const result = document.getElementById("masterBarangResult");
+
+  result.className = "result";
+  result.textContent = "Menyimpan perubahan...";
+
+  try {
+
+    const { error } = await supabaseClient
+      .from("master_barang")
+      .update({
+        status: aktif ? "AKTIF" : "NONAKTIF",
+        aktif: aktif
+      })
+      .eq("id_barang", idBarang);
+
+    if (error) {
+      throw error;
+    }
+
+    result.className = "result success";
+    result.textContent =
+      `✅ Barang ${idBarang} berhasil ${aktif ? "diaktifkan" : "dinonaktifkan"}.`;
+
+    // Bersihkan cache barang transaksi
+    salesProductsLoaded = false;
+    salesProducts = [];
+
+    purchaseProductsLoaded = false;
+    purchaseProducts = [];
+
+    // Muat ulang Master Barang
+    await loadMasterBarang();
+
+  } catch (error) {
+
+    console.error("SUPABASE UBAH STATUS ERROR:", error);
+
+    result.className = "result error";
+    result.textContent =
+      "❌ " + (error.message || "Gagal mengubah status barang.");
+  }
+}
 
 
   // ============================================================
