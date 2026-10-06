@@ -2879,6 +2879,7 @@ const hasil = await response.json();
 
     button.disabled = true;
     button.textContent = "Menyimpan...";
+
     result.className = "result";
     result.textContent = "";
 
@@ -2973,10 +2974,17 @@ const hasil = await response.json();
       if (masterUpdateError) throw masterUpdateError;
 
       if (String(data.pembayaran || "").toLowerCase() === "tunai") {
+
+        // ID kas harus benar-benar unik.
+        // Sebelumnya memakai KAS-{idPembelian}, sehingga saat transaksi
+        // dicoba ulang dapat berbenturan dengan primary key kas.
+        const idKas = "KAS-" + Date.now() + "-" +
+          Math.random().toString(36).slice(2, 10).toUpperCase();
+
         const { error: kasError } = await supabaseClient
           .from("kas")
           .insert({
-            id_kas: "KAS-" + idPembelian,
+            id_kas: idKas,
             tanggal: new Date().toISOString(),
             jenis: "KELUAR",
             kategori: "PEMBELIAN",
