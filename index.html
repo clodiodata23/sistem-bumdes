@@ -1585,7 +1585,7 @@ html, body {
 
         <p class="help">
 
-          Sistem akan mengambil nama barang dari sheet BARANG. Barang masuk akan menambah stok.
+          Sistem mengambil data barang dari Supabase. Barang masuk otomatis menambah stok, memperbarui HPP rata-rata, dan jika pembayaran tunai mencatat kas keluar.
 
           Jika pembayaran Tunai, transaksi pembelian juga dicatat sebagai kas keluar.
 
@@ -2857,163 +2857,163 @@ const hasil = await response.json();
 
     event.preventDefault();
 
-
-
     const button = document.getElementById("purchaseButton");
-
     const result = document.getElementById("purchaseResult");
 
-
-
-    const qtyInput = document.getElementById("purchaseQty").value.trim();
-
-    const hargaBeliInput = document.getElementById("purchaseHargaBeli").value.trim();
-
-
-
     const data = {
-
-      action: "simpanBarangMasuk",
-
       idBarang: document.getElementById("purchaseIdBarang").value.trim(),
-
-      qty: Number(qtyInput),
-
-      jumlah: Number(qtyInput),
-
+      qty: Number(document.getElementById("purchaseQty").value),
       supplier: document.getElementById("purchaseSupplier").value.trim(),
-
-      hargaBeli: ambilAngkaHarga(hargaBeliInput),
-
+      hargaBeli: ambilAngkaHarga(document.getElementById("purchaseHargaBeli").value),
       pembayaran: document.getElementById("purchasePembayaran").value,
-
       nomorNota: document.getElementById("purchaseNota").value.trim(),
-
       linkNota: document.getElementById("purchaseLinkNota").value.trim(),
-
       keterangan: document.getElementById("purchaseKeterangan").value.trim()
-
     };
 
-
-
-    if (!data.idBarang || data.qty <= 0 || data.hargaBeli < 0 || !data.supplier) {
-
+    if (!data.idBarang || data.qty <= 0 || data.hargaBeli <= 0 || !data.supplier) {
       result.className = "result error";
-
       result.textContent = "❌ Barang, jumlah, supplier, dan harga beli wajib diisi. Pilih barang dari daftar.";
-
       return;
-
     }
 
-
-
     button.disabled = true;
-
     button.textContent = "Menyimpan...";
-
     result.className = "result";
-
     result.textContent = "";
 
-
-
     try {
+      const [
+        { data: master, error: masterError },
+        { data: stok, error: stokError }
+      ] = await Promise.all([
+        supabaseClient
+          .from("master_barang")
+          .select("id_barang,nama_barang,harga_beli_terakhir,hpp_rata_rata,harga_jual,aktif")
+          .eq("id_barang", data.idBarang)
+          .maybeSingle(),
 
-      // Kirim parameter secara eksplisit agar tidak ada field yang hilang.
+        supabaseClient
+          .from("stok")
+          .select("id_barang,nama_barang,stok_awal,barang_masuk,terjual,stok_akhir,stok_minimum,status")
+          .eq("id_barang", data.idBarang)
+          .maybeSingle()
+      ]);
 
-      const params = new URLSearchParams();
+      if (masterError) throw masterError;
+      if (stokError) throw stokError;
+      if (!master) throw new Error("Data master barang tidak ditemukan.");
+      if (master.aktif === false) throw new Error("Barang ini sudah nonaktif.");
+      if (!stok) throw new Error("Data stok barang tidak ditemukan.");
 
-      params.set("action", data.action);
+      const stokLama = Number(stok.stok_akhir) || 0;
+      const barangMasukLama = Number(stok.barang_masuk) || 0;
+      const stokMinimum = Number(stok.stok_minimum) || 0;
 
-      params.set("idBarang", data.idBarang);
+      const hppLama =
+        Number(master.hpp_rata_rata) ||
+        Number(master.harga_beli_terakhir) ||
+        0;
 
-      params.set("qty", String(data.qty));
+      const hppBaru = hppLama > 0 && stokLama > 0
+        ? Math.round(((stokLama * hppLama) + (data.qty * data.hargaBeli)) / (stokLama + data.qty))
+        : data.hargaBeli;
 
-      params.set("jumlah", String(data.jumlah));
+      const stokBaru = stokLama + data.qty;
+      const barangMasukBaru = barangMasukLama + data.qty;
 
-      params.set("supplier", data.supplier);
-
-      params.set("hargaBeli", String(data.hargaBeli));
-
-      params.set("pembayaran", data.pembayaran);
-
-      params.set("nomorNota", data.nomorNota);
-
-      params.set("linkNota", data.linkNota);
-
-      params.set("keterangan", data.keterangan);
-
-
-
-      const response = await fetch(API_URL + "?" + params.toString(), {
-
-        method: "GET",
-
-        cache: "no-store"
-
-      });
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal menyimpan barang masuk.");
-
+      let statusBaru = "AMAN";
+      if (stokBaru <= 0) {
+        statusBaru = "HABIS";
+      } else if (stokBaru <= stokMinimum) {
+        statusBaru = "MENIPIS";
       }
 
+      const totalPembelian = data.qty * data.hargaBeli;
+      const idPembelian = "BM" + Date.now();
 
+      const { error: pembelianError } = await supabaseClient
+        .from("barang_masuk")
+        .insert({
+          id_pembelian: idPembelian,
+          tanggal: new Date().toISOString(),
+          id_barang: data.idBarang,
+          nama_barang: master.nama_barang,
+          supplier: data.supplier,
+          qty: data.qty,
+          harga_beli: data.hargaBeli,
+          total_pembelian: totalPembelian,
+          pembayaran: data.pembayaran || "Tunai",
+          nomor_nota: data.nomorNota || null,
+          link_nota: data.linkNota || null,
+          keterangan: data.keterangan || null
+        });
+
+      if (pembelianError) throw pembelianError;
+
+      const { error: stokUpdateError } = await supabaseClient
+        .from("stok")
+        .update({
+          barang_masuk: barangMasukBaru,
+          stok_akhir: stokBaru,
+          status: statusBaru
+        })
+        .eq("id_barang", data.idBarang);
+
+      if (stokUpdateError) throw stokUpdateError;
+
+      const { error: masterUpdateError } = await supabaseClient
+        .from("master_barang")
+        .update({
+          harga_beli_terakhir: data.hargaBeli,
+          hpp_rata_rata: hppBaru
+        })
+        .eq("id_barang", data.idBarang);
+
+      if (masterUpdateError) throw masterUpdateError;
+
+      if (String(data.pembayaran || "").toLowerCase() === "tunai") {
+        const { error: kasError } = await supabaseClient
+          .from("kas")
+          .insert({
+            id_kas: "KAS-" + idPembelian,
+            tanggal: new Date().toISOString(),
+            jenis: "KELUAR",
+            kategori: "PEMBELIAN",
+            keterangan: "Pembelian " + master.nama_barang,
+            debit: 0,
+            kredit: totalPembelian,
+            referensi: idPembelian
+          });
+
+        if (kasError) throw kasError;
+      }
 
       result.className = "result success";
-
       result.innerHTML =
-
         "✅ Barang masuk berhasil disimpan.<br>" +
-
-        "ID: <strong>" + hasil.idPembelian + "</strong><br>" +
-
-        "Barang: <strong>" + escapeHtml(hasil.namaBarang) + "</strong><br>" +
-
-        "Total pembelian: <strong>" + formatRupiah(hasil.totalPembelian) + "</strong>";
-
-
+        "ID: <strong>" + escapeHtml(idPembelian) + "</strong><br>" +
+        "Barang: <strong>" + escapeHtml(master.nama_barang) + "</strong><br>" +
+        "Jumlah masuk: <strong>" + formatNumber(data.qty) + "</strong><br>" +
+        "Stok sekarang: <strong>" + formatNumber(stokBaru) + "</strong><br>" +
+        "HPP rata-rata: <strong>" + formatRupiah(hppBaru) + "</strong><br>" +
+        "Total pembelian: <strong>" + formatRupiah(totalPembelian) + "</strong>";
 
       document.getElementById("purchaseForm").reset();
-
       clearPurchaseProductSelection();
-
-
-
-      // Simpan lebih cepat: tidak melakukan request tambahan.
-      // Cache daftar barang dibersihkan agar data baru diambil saat dibutuhkan.
       purchaseProductsLoaded = false;
       purchaseProducts = [];
 
-
-
     } catch (error) {
-
       result.className = "result error";
-
-      result.textContent = "❌ " + error.message;
-
-      console.error(error);
-
+      result.textContent = "❌ " + (error.message || "Gagal menyimpan barang masuk.");
+      console.error("SUPABASE BARANG MASUK ERROR:", error);
     }
 
-
-
     button.disabled = false;
-
     button.textContent = "Simpan Barang Masuk";
 
   });
-
-
-
 
 
   // ============================================================
