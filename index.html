@@ -1988,65 +1988,31 @@ function ambilAngkaHarga(value) {
 
 
   async function loadSalesProducts() {
-
     if (salesProductsLoaded) return;
-
-
-
     const searchInput = document.getElementById("salesSearch");
-
     const list = document.getElementById("salesProductList");
-
     const info = document.getElementById("salesProductInfo");
-
-
-
     if (!searchInput || !list) return;
-
-
-
     info.textContent = "Memuat daftar barang...";
-
-
-
     try {
-
-      const response = await fetch(API_URL + "?action=getMasterBarang", { cache: "no-store" });
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal mengambil daftar barang.");
-
-      }
-
-
-
-      salesProducts = (Array.isArray(hasil.data) ? hasil.data : [])
-        .filter(item => item.aktif !== false);
-
+      const [{ data: masterData, error: masterError }, { data: stokRows, error: stokError }] = await Promise.all([
+        supabaseClient.from("master_barang").select("id_barang,nama_barang,kategori,satuan,harga_jual,hpp_rata_rata,aktif").eq("aktif", true).order("nama_barang", { ascending: true }),
+        supabaseClient.from("stok").select("id_barang,stok_awal,barang_masuk,terjual,stok_akhir,status")
+      ]);
+      if (masterError) throw masterError;
+      if (stokError) throw stokError;
+      const stokMap = new Map((stokRows || []).map(x => [String(x.id_barang), x]));
+      salesProducts = (masterData || []).map(item => { const stok = stokMap.get(String(item.id_barang)); return {
+        idBarang: item.id_barang, namaBarang: item.nama_barang, kategori: item.kategori, satuan: item.satuan,
+        hargaJual: Number(item.harga_jual) || 0, hpp: Number(item.hpp_rata_rata) || 0,
+        stokAwal: stok ? Number(stok.stok_awal) || 0 : 0, barangMasuk: stok ? Number(stok.barang_masuk) || 0 : 0,
+        terjual: stok ? Number(stok.terjual) || 0 : 0, stokAkhir: stok ? Number(stok.stok_akhir) || 0 : 0,
+        status: stok?.status || "HABIS", aktif: item.aktif !== false
+      }; });
       salesProductsLoaded = true;
-
-      info.textContent = salesProducts.length
-
-        ? "Ketik nama barang untuk mencari, lalu pilih dari daftar."
-
-        : "Belum ada data barang.";
-
-    } catch (error) {
-
-      info.textContent = "❌ Daftar barang gagal dimuat.";
-
-      console.error(error);
-
-    }
-
+      info.textContent = salesProducts.length ? "Ketik nama barang untuk mencari, lalu pilih dari daftar." : "Belum ada data barang.";
+    } catch (error) { info.textContent = "❌ Daftar barang gagal dimuat: " + (error.message || "Error"); console.error("SUPABASE SALES PRODUCTS ERROR:", error); }
   }
-
-
 
   function renderSalesProductList(keyword = "") {
 
@@ -2421,65 +2387,31 @@ const hasil = await response.json();
 
 
   async function loadPurchaseProducts() {
-
     if (purchaseProductsLoaded) return;
-
-
-
     const searchInput = document.getElementById("purchaseSearch");
-
     const list = document.getElementById("purchaseProductList");
-
     const info = document.getElementById("purchaseProductInfo");
-
-
-
     if (!searchInput || !list) return;
-
-
-
     info.textContent = "Memuat daftar barang...";
-
-
-
     try {
-
-      const response = await fetch(API_URL + "?action=getMasterBarang", { cache: "no-store" });
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal mengambil daftar barang.");
-
-      }
-
-
-
-      purchaseProducts = (Array.isArray(hasil.data) ? hasil.data : [])
-        .filter(item => item.aktif !== false);
-
+      const [{ data: masterData, error: masterError }, { data: stokRows, error: stokError }] = await Promise.all([
+        supabaseClient.from("master_barang").select("id_barang,nama_barang,kategori,satuan,harga_jual,hpp_rata_rata,aktif").eq("aktif", true).order("nama_barang", { ascending: true }),
+        supabaseClient.from("stok").select("id_barang,stok_awal,barang_masuk,terjual,stok_akhir,status")
+      ]);
+      if (masterError) throw masterError;
+      if (stokError) throw stokError;
+      const stokMap = new Map((stokRows || []).map(x => [String(x.id_barang), x]));
+      purchaseProducts = (masterData || []).map(item => { const stok = stokMap.get(String(item.id_barang)); return {
+        idBarang: item.id_barang, namaBarang: item.nama_barang, kategori: item.kategori, satuan: item.satuan,
+        hargaJual: Number(item.harga_jual) || 0, hpp: Number(item.hpp_rata_rata) || 0,
+        stokAwal: stok ? Number(stok.stok_awal) || 0 : 0, barangMasuk: stok ? Number(stok.barang_masuk) || 0 : 0,
+        terjual: stok ? Number(stok.terjual) || 0 : 0, stokAkhir: stok ? Number(stok.stok_akhir) || 0 : 0,
+        status: stok?.status || "HABIS", aktif: item.aktif !== false
+      }; });
       purchaseProductsLoaded = true;
-
-      info.textContent = purchaseProducts.length
-
-        ? "Ketik nama barang untuk mencari, lalu pilih dari daftar."
-
-        : "Belum ada data barang.";
-
-    } catch (error) {
-
-      info.textContent = "❌ Daftar barang gagal dimuat.";
-
-      console.error(error);
-
-    }
-
+      info.textContent = purchaseProducts.length ? "Ketik nama barang untuk mencari, lalu pilih dari daftar." : "Belum ada data barang.";
+    } catch (error) { info.textContent = "❌ Daftar barang gagal dimuat: " + (error.message || "Error"); console.error("SUPABASE PURCHASE PRODUCTS ERROR:", error); }
   }
-
-
 
   function renderPurchaseProductList(keyword = "") {
 
@@ -3047,73 +2979,37 @@ const hasil = await response.json();
   const tbody = document.getElementById("masterBarangTableBody");
   const summary = document.getElementById("masterBarangSummary");
   const result = document.getElementById("masterBarangResult");
-
   if (!tbody) return;
-
-  tbody.innerHTML =
-    '<tr><td colspan="11" class="empty-state">⏳ Memuat master barang...</td></tr>';
-
+  tbody.innerHTML = '<tr><td colspan="11" class="empty-state">⏳ Memuat master barang...</td></tr>';
   if (summary) summary.textContent = "Memuat data...";
-  if (result) {
-    result.className = "result";
-    result.textContent = "";
-  }
-
+  if (result) { result.className = "result"; result.textContent = ""; }
   try {
-    const { data, error } = await supabaseClient
-      .from("master_barang")
-      .select(`
-        id_barang,
-        nama_barang,
-        kategori,
-        satuan,
-        harga_beli_terakhir,
-        hpp_rata_rata,
-        harga_jual,
-        stok_minimum,
-        status,
-        aktif
-      `)
-      .order("id_barang", { ascending: true });
-
-    if (error) {
-      throw error;
-    }
-
-    masterBarangData = (data || []).map(item => ({
-      idBarang: item.id_barang,
-      namaBarang: item.nama_barang,
-      kategori: item.kategori,
-      satuan: item.satuan,
-      hargaBeliTerakhir: Number(item.harga_beli_terakhir) || 0,
-      hppRataRata: Number(item.hpp_rata_rata) || 0,
-      hargaJual: Number(item.harga_jual) || 0,
-      stokMinimum: Number(item.stok_minimum) || 0,
-      status: item.status,
-      aktif: item.aktif !== false
-    }));
-
+    const [{ data: masterData, error: masterError }, { data: stokRows, error: stokError }] = await Promise.all([
+      supabaseClient.from("master_barang").select("id_barang,nama_barang,kategori,satuan,harga_beli_terakhir,hpp_rata_rata,harga_jual,stok_minimum,status,aktif").order("id_barang", { ascending: true }),
+      supabaseClient.from("stok").select("id_barang,nama_barang,stok_awal,barang_masuk,terjual,stok_akhir,stok_minimum,status")
+    ]);
+    if (masterError) throw masterError;
+    if (stokError) throw stokError;
+    const stokMap = new Map((stokRows || []).map(item => [String(item.id_barang), item]));
+    masterBarangData = (masterData || []).map(item => {
+      const stok = stokMap.get(String(item.id_barang));
+      return {
+        idBarang: item.id_barang, namaBarang: item.nama_barang, kategori: item.kategori, satuan: item.satuan,
+        hargaBeliTerakhir: Number(item.harga_beli_terakhir) || 0, hppRataRata: Number(item.hpp_rata_rata) || 0,
+        hargaJual: Number(item.harga_jual) || 0, stokAwal: stok ? Number(stok.stok_awal) || 0 : 0,
+        barangMasuk: stok ? Number(stok.barang_masuk) || 0 : 0, terjual: stok ? Number(stok.terjual) || 0 : 0,
+        stokAkhir: stok ? Number(stok.stok_akhir) || 0 : 0,
+        stokMinimum: Number(item.stok_minimum) || (stok ? Number(stok.stok_minimum) || 0 : 0),
+        status: item.status, aktif: item.aktif !== false
+      };
+    });
     renderMasterBarang(masterBarangData);
-
-    if (result) {
-      result.className = "result success";
-      result.textContent = "✅ Data Master Barang berhasil dimuat dari Supabase.";
-    }
-
+    if (result) { result.className = "result success"; result.textContent = "✅ Data Master Barang dan stok berhasil dimuat dari Supabase."; }
   } catch (error) {
-    console.error("SUPABASE MASTER BARANG ERROR:", error);
-
-    masterBarangData = [];
-
-    tbody.innerHTML =
-      '<tr><td colspan="11" class="empty-state">❌ Master barang gagal dimuat.</td></tr>';
-
+    console.error("SUPABASE MASTER BARANG ERROR:", error); masterBarangData = [];
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">❌ Master barang gagal dimuat.</td></tr>';
     if (summary) summary.textContent = "Data gagal dimuat.";
-
-    if (result) {
-      result.className = "result error";
-      result.textContent = "❌ " + (error.message || "Gagal memuat Master Barang.");
-    }
+    if (result) { result.className = "result error"; result.textContent = "❌ " + (error.message || "Gagal memuat Master Barang."); }
   }
 }
   function renderMasterBarang(data) {
@@ -3351,36 +3247,25 @@ const hasil = await response.json();
         throw errorAmbilStok;
       }
 
-      // Jika data stok ditemukan, perbarui stok_minimum
-      // dan status stok berdasarkan stok berjalan.
+      const barangMasuk = Number(dataStok?.barang_masuk || 0);
+      const terjual = Number(dataStok?.terjual || 0);
+      const stokAkhir = stokAwal + barangMasuk - terjual;
+      const statusStok = stokAkhir <= 0 ? "HABIS" : stokAkhir <= stokMinimum ? "MENIPIS" : "AMAN";
+
+      // Jika baris stok sudah ada -> update. Jika belum ada -> buat baru.
       if (dataStok) {
-
-        const barangMasuk = Number(dataStok.barang_masuk || 0);
-        const terjual = Number(dataStok.terjual || 0);
-        const stokAkhir = stokAwal + barangMasuk - terjual;
-
-        const statusStok =
-          stokAkhir <= 0
-            ? "HABIS"
-            : stokAkhir <= stokMinimum
-              ? "MENIPIS"
-              : "AMAN";
-
-        const { error: errorUpdateStok } =
-          await supabaseClient
-            .from("stok")
-            .update({
-              nama_barang: namaBarang,
-              stok_awal: stokAwal,
-              stok_minimum: stokMinimum,
-              stok_akhir: stokAkhir,
-              status: statusStok
-            })
-            .eq("id_barang", editId);
-
-        if (errorUpdateStok) {
-          throw errorUpdateStok;
-        }
+        const { error: errorUpdateStok } = await supabaseClient.from("stok").update({
+          nama_barang: namaBarang, stok_awal: stokAwal, stok_minimum: stokMinimum,
+          stok_akhir: stokAkhir, status: statusStok
+        }).eq("id_barang", editId);
+        if (errorUpdateStok) throw errorUpdateStok;
+      } else {
+        const { error: errorInsertStok } = await supabaseClient.from("stok").insert({
+          id_barang: editId, nama_barang: namaBarang, stok_awal: stokAwal,
+          barang_masuk: 0, terjual: 0, stok_akhir: stokAwal,
+          stok_minimum: stokMinimum, status: statusStok
+        });
+        if (errorInsertStok) throw errorInsertStok;
       }
 
       // --------------------------------------------------------
