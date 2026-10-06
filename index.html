@@ -1201,7 +1201,9 @@
 
               <label for="purchaseHargaBeli">Harga Beli / Unit</label>
 
-              <input id="purchaseHargaBeli" type="number" min="0" step="1" required>
+              <input id="purchaseHargaBeli" type="text" inputmode="numeric"
+                     placeholder="Contoh: Rp100.000"
+                     oninput="formatHargaInput(this)" required>
 
             </div>
 
@@ -2364,21 +2366,8 @@ const hasil = await response.json();
 
 
 
-        // Perbarui semua data yang terlihat tanpa reload browser.
-
-        // await loadDashboard();
-
-
-
-        // Paksa ambil ulang data stok terbaru setelah transaksi tersimpan.
-
-        // salesProductsLoaded = false;
-
-        // salesProducts = [];
-
-        // await loadSalesProducts();
+        // Simpan lebih cepat: tidak melakukan request tambahan.
         salesProductsLoaded = false;
-
         salesProducts = [];
 
 
@@ -2688,7 +2677,7 @@ const hasil = await response.json();
 
       supplier: document.getElementById("purchaseSupplier").value.trim(),
 
-      hargaBeli: Number(hargaBeliInput),
+      hargaBeli: ambilAngkaHarga(hargaBeliInput),
 
       pembayaran: document.getElementById("purchasePembayaran").value,
 
@@ -2792,29 +2781,10 @@ const hasil = await response.json();
 
 
 
-      // Perbarui semua data yang terlihat tanpa reload browser.
-
-      await loadDashboard();
-
-
-
-      // Perbarui stok jika halaman Stok sudah pernah dibuka.
-
-      if (typeof loadStok === "function") {
-
-        await loadStok();
-
-      }
-
-
-
-      // Paksa ambil ulang data stok terbaru setelah transaksi tersimpan.
-
+      // Simpan lebih cepat: tidak melakukan request tambahan.
+      // Cache daftar barang dibersihkan agar data baru diambil saat dibutuhkan.
       purchaseProductsLoaded = false;
-
       purchaseProducts = [];
-
-      await loadPurchaseProducts();
 
 
 
@@ -2868,7 +2838,7 @@ const hasil = await response.json();
 
       keterangan: document.getElementById("expenseKeterangan").value.trim(),
 
-      jumlah: Number(document.getElementById("expenseJumlah").value),
+      jumlah: ambilAngkaHarga(document.getElementById("expenseJumlah").value),
 
       pembayaran: document.getElementById("expensePembayaran").value,
 
@@ -2960,9 +2930,7 @@ const hasil = await response.json();
 
 
 
-      // Perbarui Dashboard agar Pengeluaran dan Laba Bersih langsung berubah.
-
-      loadDashboard();
+      // Dashboard akan diperbarui saat halaman Dashboard dibuka atau di-refresh.
 
 
 
@@ -3224,6 +3192,7 @@ const hasil = await response.json();
 
     document.getElementById("masterEditId").value = "";
     document.getElementById("masterIdBarang").disabled = false;
+    document.getElementById("masterIdBarang").readOnly = true;
     document.getElementById("masterHargaBeli").disabled = false;
     document.getElementById("masterStokAwal").disabled = false;
     document.getElementById("masterAktifField").style.display = "none";
@@ -3295,9 +3264,9 @@ const hasil = await response.json();
     document.getElementById("masterStokMinimum").value || 0
   );
 
-  const statusElement = document.getElementById("masterStatus");
+  const statusElement = document.getElementById("masterAktif");
   const status = statusElement
-    ? statusElement.value
+    ? (statusElement.value === "true" ? "AKTIF" : "NONAKTIF")
     : "AKTIF";
 
   // ==========================================================
@@ -3563,8 +3532,9 @@ const hasil = await response.json();
 
     button.disabled = false;
 
-    button.textContent =
-      "Simpan Barang";
+    button.textContent = editId
+      ? "Simpan Perubahan"
+      : "Simpan Barang";
   }
 
 });
