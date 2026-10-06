@@ -1552,12 +1552,14 @@
               </div>
               <div>
                 <label for="masterHargaBeli">Harga Beli Awal</label>
-                <input id="masterHargaBeli" type="number" min="0" step="1" placeholder="Contoh: 100000" required>
+                <!-- <input id="masterHargaBeli" type="number" min="0" step="1" placeholder="Contoh: 100000" required> -->
+                <input id="masterHargaBeli" type="text" inputmode="numeric" placeholder="Contoh: Rp10.000" required oninput="formatHargaInput(this)">
                 <div class="help">Saat edit, harga beli/HPP tidak diubah agar riwayat HPP tetap aman.</div>
               </div>
               <div>
                 <label for="masterHargaJual">Harga Jual</label>
-                <input id="masterHargaJual" type="number" min="0" step="1" placeholder="Contoh: 125000" required>
+                <!-- <input id="masterHargaJual" type="number" min="0" step="1" placeholder="Contoh: 125000" required> -->
+                 <input id="masterHargaJual" type="text" inputmode="numeric" placeholder="Contoh: Rp125.000" required oninput="formatHargaInput(this)">
               </div>
               <div>
                 <label for="masterStokAwal">Stok Awal</label>
@@ -1831,6 +1833,21 @@
     }
 
   }
+
+  function formatHargaInput(input) {
+  let angka = input.value.replace(/\D/g, "");
+
+  if (!angka) {
+    input.value = "";
+    return;
+  }
+
+  input.value = "Rp" + Number(angka).toLocaleString("id-ID");
+}
+
+function ambilAngkaHarga(value) {
+  return Number(String(value).replace(/\D/g, "")) || 0;
+}
 
 
 
@@ -3147,8 +3164,16 @@ const hasil = await response.json();
     document.getElementById("masterNamaBarang").value = item.namaBarang || "";
     document.getElementById("masterKategori").value = item.kategori || "";
     document.getElementById("masterSatuan").value = item.satuan || "";
-    document.getElementById("masterHargaBeli").value = Number(item.hargaBeliTerakhir) || 0;
-    document.getElementById("masterHargaJual").value = Number(item.hargaJual) || 0;
+    // document.getElementById("masterHargaBeli").value = Number(item.hargaBeliTerakhir) || 0;
+    document.getElementById("masterHargaBeli").value =
+  item.hargaBeliTerakhir
+    ? "Rp" + Number(item.hargaBeliTerakhir).toLocaleString("id-ID")
+    : "";
+    // document.getElementById("masterHargaJual").value = Number(item.hargaJual) || 0;
+    document.getElementById("masterHargaJual").value =
+  item.hargaJual
+    ? "Rp" + Number(item.hargaJual).toLocaleString("id-ID")
+    : "";
     document.getElementById("masterStokAwal").value = Number(item.stokAwal) || 0;
     document.getElementById("masterStokMinimum").value = Number(item.stokMinimum) || 0;
     document.getElementById("masterAktif").value = item.aktif !== false ? "true" : "false";
@@ -3176,8 +3201,8 @@ const hasil = await response.json();
       namaBarang: document.getElementById("masterNamaBarang").value.trim(),
       kategori: document.getElementById("masterKategori").value.trim(),
       satuan: document.getElementById("masterSatuan").value.trim(),
-      hargaBeli: Number(document.getElementById("masterHargaBeli").value || 0),
-      hargaJual: Number(document.getElementById("masterHargaJual").value || 0),
+     hargaBeli: ambilAngkaHarga(document.getElementById("masterHargaBeli").value),
+      hargaJual: ambilAngkaHarga(document.getElementById("masterHargaJual").value),
       stokAwal: Number(document.getElementById("masterStokAwal").value || 0),
       stokMinimum: Number(document.getElementById("masterStokMinimum").value || 0),
       aktif: editId ? document.getElementById("masterAktif").value === "true" : true
