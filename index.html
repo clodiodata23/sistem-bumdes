@@ -7,12 +7,13 @@
   <meta charset="UTF-8">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <title>BUMDes - Sistem Kas & Inventori</title>
 
 
 
-  <style>
+  <style> 
 
     :root {
 
@@ -1750,7 +1751,24 @@
 
 
 
+  // const API_URL = "https://script.google.com/macros/s/AKfycbwGa6qcZZI1No91DTILcQUJyVOm451QqV2wsRm7YILa76t-92x4WHPjavpT5tsPOGDN/exec";
+  // const API_URL = "https://tspfcbbjjurkbrihubgw.supabase.co/rest/v1/";
+
   const API_URL = "https://script.google.com/macros/s/AKfycbwGa6qcZZI1No91DTILcQUJyVOm451QqV2wsRm7YILa76t-92x4WHPjavpT5tsPOGDN/exec";
+
+// ============================================================
+// SUPABASE
+// ============================================================
+
+// const SUPABASE_URL = "https://tspfcbbjjurkbrihubgw.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://tspfcbbjjurkbrihubgw.supabase.co";
+
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_TNXvYkAj7uMTVao0P78LXw_mhIp_0AS";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
 
 
 
