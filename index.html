@@ -1443,7 +1443,10 @@
 
           </div>
 
-          <button class="btn btn-secondary" type="button" onclick="loadStok()">↻ Refresh Stok</button>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" type="button" onclick="loadStok()">↻ Refresh Stok</button>
+            <button class="btn btn-primary" type="button" onclick="downloadStokPDF()">📄 Download PDF Stok</button>
+          </div>
 
         </div>
 
@@ -3087,6 +3090,132 @@ const hasil = await response.json();
 
   }
 
+
+
+  function downloadStokPDF() {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("Library PDF belum siap. Pastikan koneksi internet aktif, lalu coba lagi.");
+      return;
+    }
+
+    if (!Array.isArray(stokData) || !stokData.length) {
+      alert("Data stok belum tersedia. Klik Refresh Stok terlebih dahulu.");
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF("l", "mm", "a4");
+    const margin = 12;
+    let y = 14;
+
+    const aman = stokData.filter(x => String(x.status || "") === "AMAN").length;
+    const menipis = stokData.filter(x => String(x.status || "") === "MENIPIS").length;
+    const habis = stokData.filter(x => String(x.status || "") === "HABIS").length;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(17);
+    doc.text("LAPORAN STOK BARANG", 148.5, y, { align: "center" });
+    y += 7;
+
+    doc.setFontSize(13);
+    doc.text("BUMDes Mandiri Sejahtera", 148.5, y, { align: "center" });
+    y += 6;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("Kampung Margorukun", 148.5, y, { align: "center" });
+    y += 5;
+    doc.setFontSize(9);
+    doc.text("Sistem Kas & Inventori", 148.5, y, { align: "center" });
+    y += 5;
+
+    doc.setDrawColor(22, 89, 56);
+    doc.setLineWidth(0.7);
+    doc.line(margin, y, 297 - margin, y);
+    y += 7;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Tanggal Laporan", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(formatLaporanDate(tanggalHariIniISO()), margin + 35, y);
+    y += 8;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Ringkasan Stok", margin, y);
+    y += 4;
+
+    doc.autoTable({
+      startY: y,
+      head: [["Total Jenis Barang", "Stok Aman", "Stok Menipis", "Stok Habis"]],
+      body: [[
+        formatNumber(stokData.length),
+        formatNumber(aman),
+        formatNumber(menipis),
+        formatNumber(habis)
+      ]],
+      theme: "grid",
+      styles: { fontSize: 9, cellPadding: 3, halign: "center" },
+      headStyles: { fontStyle: "bold" },
+      margin: { left: margin, right: margin }
+    });
+
+    y = doc.lastAutoTable.finalY + 8;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Daftar Stok Barang", margin, y);
+    y += 2;
+
+    const rows = stokData.map(item => [
+      String(item.idBarang || "-"),
+      String(item.namaBarang || "-"),
+      formatNumber(item.stokAwal),
+      formatNumber(item.barangMasuk),
+      formatNumber(item.terjual),
+      formatNumber(item.stokAkhir),
+      formatNumber(item.stokMinimum),
+      String(item.status || "-")
+    ]);
+
+    doc.autoTable({
+      startY: y,
+      head: [["ID Barang", "Nama Barang", "Stok Awal", "Barang Masuk", "Terjual", "Stok Akhir", "Minimum", "Status"]],
+      body: rows,
+      theme: "striped",
+      styles: {
+        fontSize: 8.5,
+        cellPadding: 2.8,
+        valign: "middle"
+      },
+      headStyles: { fontStyle: "bold" },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 68 },
+        2: { halign: "right" },
+        3: { halign: "right" },
+        4: { halign: "right" },
+        5: { halign: "right" },
+        6: { halign: "right" },
+        7: { halign: "center" }
+      },
+      margin: { left: margin, right: margin }
+    });
+
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text(
+        `BUMDes Mandiri Sejahtera • Kampung Margorukun • Laporan Stok • Halaman ${i}/${pageCount}`,
+        148.5, 205, { align: "center" }
+      );
+    }
+
+    doc.save(`Laporan-Stok-BUMDes-Mandiri-Sejahtera-${tanggalHariIniISO()}.pdf`);
+  }
 
 
   function formatNumber(value) {
