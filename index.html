@@ -3330,7 +3330,8 @@ const hasil = await response.json();
     const totalPenjualan = penjualan.reduce((s, x) => s + Number(x.total || 0), 0);
     const totalPembelian = pembelian.reduce((s, x) => s + Number(x.total || 0), 0);
     const totalPengeluaran = pengeluaran.reduce((s, x) => s + Number(x.jumlah || 0), 0);
-    const labaKotor = penjualan.reduce((s, x) => s + Number(x.laba || 0), 0);
+    const totalHPP = penjualan.reduce((s, x) => s + Number(x.hpp || 0), 0);
+    const labaKotor = totalPenjualan - totalHPP;
     const labaBersih = labaKotor - totalPengeluaran;
 
     const { jsPDF } = window.jspdf;
@@ -3338,35 +3339,62 @@ const hasil = await response.json();
     const margin = 14;
     let y = 16;
 
+    // KOP LAPORAN
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text("LAPORAN KEUANGAN BUMDes", margin, y);
+    doc.setFontSize(17);
+    doc.text("LAPORAN KEUANGAN BUMDes", 105, y, { align: "center" });
     y += 7;
+    doc.setFontSize(13);
+    doc.text("BUMDes Mandiri Sejahtera", 105, y, { align: "center" });
+    y += 6;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text("Sistem Kas & Inventori", margin, y);
-    y += 6;
-    doc.text(`Periode: ${mulai ? formatLaporanDate(mulai) : "Semua"} s.d. ${selesai ? formatLaporanDate(selesai) : "Semua"}`, margin, y);
-    y += 8;
+    doc.text("Kampung Margorukun", 105, y, { align: "center" });
+    y += 5;
+    doc.setFontSize(9);
+    doc.text("Sistem Kas & Inventori", 105, y, { align: "center" });
+    y += 5;
+
+    doc.setDrawColor(22, 89, 56);
+    doc.setLineWidth(0.7);
+    doc.line(margin, y, 210 - margin, y);
+    y += 7;
 
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Periode Laporan", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `${mulai ? formatLaporanDate(mulai) : "Semua"} s.d. ${selesai ? formatLaporanDate(selesai) : "Semua"}`,
+      margin + 35, y
+    );
+    y += 9;
+
+    // RINGKASAN KEUANGAN
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.text("Ringkasan", margin, y);
-    y += 5;
+    doc.text("Ringkasan Keuangan", margin, y);
+    y += 4;
 
     doc.autoTable({
       startY: y,
-      head: [["Penjualan", "Pembelian", "Pengeluaran", "Laba Bersih"]],
-      body: [[formatRupiah(totalPenjualan), formatRupiah(totalPembelian), formatRupiah(totalPengeluaran), formatRupiah(labaBersih)]],
+      head: [["Penjualan", "HPP", "Laba Kotor", "Pengeluaran", "Laba Bersih"]],
+      body: [[
+        formatRupiah(totalPenjualan),
+        formatRupiah(totalHPP),
+        formatRupiah(labaKotor),
+        formatRupiah(totalPengeluaran),
+        formatRupiah(labaBersih)
+      ]],
       theme: "grid",
-      styles: { fontSize: 9, cellPadding: 3 },
+      styles: { fontSize: 8.2, cellPadding: 3, halign: "center" },
       headStyles: { fontStyle: "bold" },
       margin: { left: margin, right: margin }
     });
     y = doc.lastAutoTable.finalY + 8;
 
     function addTable(title, head, rows, emptyCols) {
-      if (y > 265) { doc.addPage(); y = 16; }
+      if (y > 260) { doc.addPage(); y = 16; }
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text(title, margin, y);
@@ -3376,7 +3404,12 @@ const hasil = await response.json();
         head: [head],
         body: rows.length ? rows : [emptyCols],
         theme: "striped",
-        styles: { fontSize: 7.5, cellPadding: 2.2, overflow: "linebreak" },
+        styles: {
+          fontSize: 7.2,
+          cellPadding: 2.2,
+          overflow: "linebreak",
+          valign: "middle"
+        },
         headStyles: { fontStyle: "bold" },
         margin: { left: margin, right: margin }
       });
@@ -3396,7 +3429,7 @@ const hasil = await response.json();
     );
 
     addTable(
-      `Pembelian (${pembelian.length} transaksi)`,
+      `Pembelian Barang (${pembelian.length} transaksi)`,
       ["ID", "Tanggal", "Barang", "Supplier", "Qty", "Total"],
       pembelian.map(x => [
         String(x.id || "-"), formatLaporanDate(x.tanggal),
@@ -3407,7 +3440,7 @@ const hasil = await response.json();
     );
 
     addTable(
-      `Pengeluaran (${pengeluaran.length} transaksi)`,
+      `Pengeluaran Operasional (${pengeluaran.length} transaksi)`,
       ["ID", "Tanggal", "Kategori", "Keterangan", "Metode", "Jumlah"],
       pengeluaran.map(x => [
         String(x.id || "-"), formatLaporanDate(x.tanggal),
@@ -3423,13 +3456,13 @@ const hasil = await response.json();
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.text(
-        `BUMDes • Laporan ${mulai ? formatLaporanDate(mulai) : "Semua"} s.d. ${selesai ? formatLaporanDate(selesai) : "Semua"} • Halaman ${i}/${pageCount}`,
-        margin, 291
+        `BUMDes Mandiri Sejahtera • Kampung Margorukun • Halaman ${i}/${pageCount}`,
+        105, 291, { align: "center" }
       );
     }
 
     const suffix = selesai || mulai || tanggalHariIniISO();
-    doc.save(`Laporan-BUMDes-${suffix}.pdf`);
+    doc.save(`Laporan-BUMDes-Mandiri-Sejahtera-${suffix}.pdf`);
   }
 
   function formatLaporanDate(value) {
