@@ -3508,7 +3508,7 @@ const hasil = await response.json();
 
 
 
-  async function loadStok() {
+  // async function loadStok() {
 
     const tbody = document.getElementById("stockTableBody");
 
@@ -3572,7 +3572,73 @@ const hasil = await response.json();
 
   }
 
+  async function loadStok() {
+  const tbody = document.getElementById("stockTableBody");
+  const summary = document.getElementById("stockSummary");
+  const result = document.getElementById("stockResult");
 
+  if (!tbody) return;
+
+  tbody.innerHTML =
+    '<tr><td colspan="8" class="empty-state">⏳ Memuat data stok...</td></tr>';
+
+  if (summary) summary.textContent = "Memuat data stok...";
+  if (result) {
+    result.className = "result";
+    result.textContent = "";
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from("stok")
+      .select(`
+        id_barang,
+        nama_barang,
+        stok_awal,
+        barang_masuk,
+        terjual,
+        stok_akhir,
+        stok_minimum,
+        status
+      `)
+      .order("nama_barang", { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    stokData = (data || []).map(item => ({
+      idBarang: item.id_barang,
+      namaBarang: item.nama_barang,
+      stokAwal: Number(item.stok_awal) || 0,
+      barangMasuk: Number(item.barang_masuk) || 0,
+      terjual: Number(item.terjual) || 0,
+      stokAkhir: Number(item.stok_akhir) || 0,
+      stokMinimum: Number(item.stok_minimum) || 0,
+      status: item.status || ""
+    }));
+
+    renderStok(stokData);
+
+    if (result) {
+      result.className = "result success";
+      result.textContent = "✅ Data stok berhasil dimuat dari Supabase.";
+    }
+
+  } catch (error) {
+    tbody.innerHTML =
+      '<tr><td colspan="8" class="empty-state">❌ Gagal mengambil data stok.</td></tr>';
+
+    if (summary) summary.textContent = "Data stok gagal dimuat.";
+
+    if (result) {
+      result.className = "result error";
+      result.textContent = "❌ " + (error.message || "Gagal mengambil data stok.");
+    }
+
+    console.error("SUPABASE STOK ERROR:", error);
+  }
+}
 
   function renderStok(data) {
 
