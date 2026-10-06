@@ -3068,10 +3068,12 @@ const hasil = await response.json();
       let stokAman = 0;
       let stokMenipis = 0;
       let stokHabis = 0;
+      let totalStokUnit = 0;
 
       activeStock.forEach(row => {
         const stokAkhir = Number(row.stok_akhir) || 0;
         const stokMinimum = Number(row.stok_minimum) || 0;
+        totalStokUnit += stokAkhir;
 
         if (stokAkhir <= 0) {
           stokHabis++;
@@ -3096,6 +3098,7 @@ const hasil = await response.json();
       if (inventoryEl) {
         inventoryEl.innerHTML =
           "📦 <strong>" + formatNumber(totalJenisBarang) + "</strong> jenis barang • " +
+          "<strong>" + formatNumber(totalStokUnit) + "</strong> unit stok • " +
           "<strong>" + formatNumber(stokAman) + "</strong> aman • " +
           "<strong>" + formatNumber(stokMenipis) + "</strong> menipis • " +
           "<strong>" + formatNumber(stokHabis) + "</strong> habis";
