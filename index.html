@@ -1011,7 +1011,7 @@
 
           <h3 class="section-title">Status Sistem</h3>
 
-          <div class="status-box" id="dashboardStatus">Mengecek koneksi Google Sheets...</div>
+          <div class="status-box" id="dashboardStatus">Mengecek koneksi Supabase...</div>
 
           <button class="btn btn-primary" type="button" onclick="loadDashboard()" style="margin-top:12px;">↻ Perbarui Dashboard</button>
 
@@ -2863,77 +2863,138 @@ const hasil = await response.json();
 
 
   async function loadDashboard() {
+    const statusEl = document.getElementById("dashboardStatus");
+    const inventoryEl = document.getElementById("dashboardInventorySummary");
+
+    if (statusEl) statusEl.textContent = "⏳ Memuat data dashboard dari Supabase...";
 
     try {
+      const [
+        { data: kasRows, error: kasError },
+        { data: salesRows, error: salesError },
+        { data: purchaseRows, error: purchaseError },
+        { data: expenseRows, error: expenseError },
+        { data: stockRows, error: stockError },
+        { data: masterRows, error: masterError }
+      ] = await Promise.all([
+        supabaseClient
+          .from("kas")
+          .select("debit,kredit"),
 
-      const response = await fetch(API_URL + "?action=getDashboard&ts=" + Date.now(), {
+        supabaseClient
+          .from("penjualan")
+          .select("total_penjualan,total_hpp,laba_kotor"),
 
-        method: "GET",
+        supabaseClient
+          .from("barang_masuk")
+          .select("total_pembelian"),
 
-        cache: "no-store"
+        supabaseClient
+          .from("pengeluaran")
+          .select("jumlah"),
 
+        supabaseClient
+          .from("stok")
+          .select("id_barang,stok_akhir,stok_minimum,status"),
+
+        supabaseClient
+          .from("master_barang")
+          .select("id_barang,aktif,status")
+      ]);
+
+      if (kasError) throw new Error("Kas: " + kasError.message);
+      if (salesError) throw new Error("Penjualan: " + salesError.message);
+      if (purchaseError) throw new Error("Barang Masuk: " + purchaseError.message);
+      if (expenseError) throw new Error("Pengeluaran: " + expenseError.message);
+      if (stockError) throw new Error("Stok: " + stockError.message);
+      if (masterError) throw new Error("Master Barang: " + masterError.message);
+
+      const kasMasuk = (kasRows || []).reduce((total, row) =>
+        total + (Number(row.debit) || 0), 0);
+
+      const kasKeluar = (kasRows || []).reduce((total, row) =>
+        total + (Number(row.kredit) || 0), 0);
+
+      const saldoKas = kasMasuk - kasKeluar;
+
+      const totalPenjualan = (salesRows || []).reduce((total, row) =>
+        total + (Number(row.total_penjualan) || 0), 0);
+
+      const totalHpp = (salesRows || []).reduce((total, row) =>
+        total + (Number(row.total_hpp) || 0), 0);
+
+      const labaKotor = (salesRows || []).reduce((total, row) =>
+        total + (Number(row.laba_kotor) || 0), 0);
+
+      const totalPembelian = (purchaseRows || []).reduce((total, row) =>
+        total + (Number(row.total_pembelian) || 0), 0);
+
+      const pengeluaran = (expenseRows || []).reduce((total, row) =>
+        total + (Number(row.jumlah) || 0), 0);
+
+      const labaBersih = labaKotor - pengeluaran;
+
+      const activeIds = new Set(
+        (masterRows || [])
+          .filter(row => row.aktif !== false && String(row.status || "AKTIF").toUpperCase() !== "NONAKTIF")
+          .map(row => String(row.id_barang))
+      );
+
+      const activeStock = (stockRows || []).filter(row =>
+        activeIds.size === 0 || activeIds.has(String(row.id_barang))
+      );
+
+      let stokAman = 0;
+      let stokMenipis = 0;
+      let stokHabis = 0;
+
+      activeStock.forEach(row => {
+        const stokAkhir = Number(row.stok_akhir) || 0;
+        const stokMinimum = Number(row.stok_minimum) || 0;
+
+        if (stokAkhir <= 0) {
+          stokHabis++;
+        } else if (stokAkhir <= stokMinimum) {
+          stokMenipis++;
+        } else {
+          stokAman++;
+        }
       });
 
-      const hasil = await response.json();
+      const totalJenisBarang = activeStock.length;
 
+      document.getElementById("dashSaldoKas").textContent = formatRupiah(saldoKas);
+      document.getElementById("dashPenjualan").textContent = formatRupiah(totalPenjualan);
+      document.getElementById("dashLabaKotor").textContent = formatRupiah(labaKotor);
+      document.getElementById("dashPengeluaran").textContent = formatRupiah(pengeluaran);
+      document.getElementById("dashPembelian").textContent = formatRupiah(totalPembelian);
+      document.getElementById("dashLabaBersih").textContent = formatRupiah(labaBersih);
+      document.getElementById("dashStokMenipis").textContent = formatNumber(stokMenipis);
+      document.getElementById("dashStokHabis").textContent = formatNumber(stokHabis);
 
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal mengambil data dashboard.");
-
+      if (inventoryEl) {
+        inventoryEl.innerHTML =
+          "📦 <strong>" + formatNumber(totalJenisBarang) + "</strong> jenis barang • " +
+          "<strong>" + formatNumber(stokAman) + "</strong> aman • " +
+          "<strong>" + formatNumber(stokMenipis) + "</strong> menipis • " +
+          "<strong>" + formatNumber(stokHabis) + "</strong> habis";
       }
 
-
-
-      const d = hasil.data || {};
-
-
-
-      document.getElementById("dashSaldoKas").textContent = formatRupiah(d.saldoKas);
-
-      document.getElementById("dashPenjualan").textContent = formatRupiah(d.totalPenjualan);
-
-      document.getElementById("dashLabaKotor").textContent = formatRupiah(d.labaKotor);
-
-      document.getElementById("dashPengeluaran").textContent = formatRupiah(d.pengeluaranOperasional);
-
-      document.getElementById("dashPembelian").textContent = formatRupiah(d.totalPembelian);
-
-      document.getElementById("dashLabaBersih").textContent = formatRupiah(d.labaBersih);
-
-      document.getElementById("dashStokMenipis").textContent = formatNumber(d.stokMenipis);
-
-      document.getElementById("dashStokHabis").textContent = formatNumber(d.stokHabis);
-
-
-
-      document.getElementById("dashboardInventorySummary").innerHTML =
-
-        "📦 <strong>" + formatNumber(d.totalJenisBarang) + "</strong> jenis barang • " +
-
-        "<strong>" + formatNumber(d.stokAman) + "</strong> aman • " +
-
-        "<strong>" + formatNumber(d.stokMenipis) + "</strong> menipis • " +
-
-        "<strong>" + formatNumber(d.stokHabis) + "</strong> habis";
-
-
-
-      document.getElementById("dashboardStatus").textContent =
-
-        "✅ Data dashboard berhasil diperbarui dari Google Sheets.";
+      if (statusEl) {
+        statusEl.className = "status-box";
+        statusEl.textContent =
+          "✅ Dashboard berhasil diperbarui dari Supabase.";
+      }
 
     } catch (error) {
+      if (statusEl) {
+        statusEl.className = "status-box";
+        statusEl.textContent = "❌ Dashboard gagal dimuat: " + (error.message || error);
+      }
 
-      document.getElementById("dashboardStatus").textContent = "❌ " + error.message;
-
-      console.error(error);
-
+      console.error("loadDashboard Supabase:", error);
     }
-
   }
-
 
 
   // ============================================================
