@@ -3269,84 +3269,188 @@ const hasil = await response.json();
   }
 
   document.getElementById("masterBarangForm").addEventListener("submit", async function(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const button = document.getElementById("masterBarangButton");
-    const result = document.getElementById("masterBarangResult");
-    const editId = document.getElementById("masterEditId").value.trim();
+  const button = document.getElementById("masterBarangButton");
+  const result = document.getElementById("masterBarangResult");
+  const editId = document.getElementById("masterEditId").value.trim();
 
-    const data = {
-      action: editId ? "editBarang" : "tambahBarang",
-      idBarang: editId || document.getElementById("masterIdBarang").value.trim().toUpperCase(),
-      namaBarang: document.getElementById("masterNamaBarang").value.trim(),
-      kategori: document.getElementById("masterKategori").value.trim(),
-      satuan: document.getElementById("masterSatuan").value.trim(),
-     hargaBeli: ambilAngkaHarga(document.getElementById("masterHargaBeli").value),
-      hargaJual: ambilAngkaHarga(document.getElementById("masterHargaJual").value),
-      stokAwal: Number(document.getElementById("masterStokAwal").value || 0),
-      stokMinimum: Number(document.getElementById("masterStokMinimum").value || 0),
-      aktif: editId ? document.getElementById("masterAktif").value === "true" : true
-    };
+  // Untuk tahap ini kita hanya pindahkan TAMBAH BARANG.
+  // Edit akan kita pindahkan setelah tambah berhasil.
+  if (editId) {
+    result.className = "result error";
+    result.textContent = "⚠️ Fungsi edit kita pindahkan ke Supabase pada langkah berikutnya.";
+    return;
+  }
 
-    // if (!data.idBarang || !data.namaBarang || !data.kategori || !data.satuan) {
-    //   result.className = "result error";
-    //   result.textContent = "❌ ID, nama, kategori, dan satuan wajib diisi.";
-    //   return;
-    // }
-    if (!data.namaBarang || !data.kategori || !data.satuan) {
-  result.className = "result error";
-  result.textContent = "❌ Nama, kategori, dan satuan wajib diisi.";
-  return;
-}
-    if (data.hargaBeli < 0 || data.hargaJual < 0 || data.stokAwal < 0 || data.stokMinimum < 0) {
-      result.className = "result error";
-      result.textContent = "❌ Nilai harga dan stok tidak boleh negatif.";
-      return;
+  const namaBarang = document.getElementById("masterNamaBarang").value.trim();
+  const kategori = document.getElementById("masterKategori").value.trim();
+  const satuan = document.getElementById("masterSatuan").value.trim();
+
+  const hargaBeli = ambilAngkaHarga(
+    document.getElementById("masterHargaBeli").value
+  );
+
+  const hargaJual = ambilAngkaHarga(
+    document.getElementById("masterHargaJual").value
+  );
+
+  const stokAwal = Number(
+    document.getElementById("masterStokAwal").value || 0
+  );
+
+  const stokMinimum = Number(
+    document.getElementById("masterStokMinimum").value || 0
+  );
+
+  if (!namaBarang || !kategori || !satuan) {
+    result.className = "result error";
+    result.textContent = "❌ Nama, kategori, dan satuan wajib diisi.";
+    return;
+  }
+
+  if (
+    hargaBeli < 0 ||
+    hargaJual < 0 ||
+    stokAwal < 0 ||
+    stokMinimum < 0
+  ) {
+    result.className = "result error";
+    result.textContent = "❌ Nilai harga dan stok tidak boleh negatif.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Menambahkan...";
+  result.className = "result";
+  result.textContent = "Menyimpan ke Supabase...";
+
+  try {
+
+    // ==========================================================
+    // 1. BUAT KODE BARANG OTOMATIS
+    // ==========================================================
+
+    const { data: daftarBarang, error: errorKode } =
+      await supabaseClient
+        .from("master_barang")
+        .select("id_barang");
+
+    if (errorKode) {
+      throw errorKode;
     }
 
-    button.disabled = true;
-    button.textContent = editId ? "Menyimpan..." : "Menambahkan...";
-    result.className = "result";
-    result.textContent = "";
+    let nomorTerakhir = 0;
 
-    try {
-      const params = new URLSearchParams();
-      Object.keys(data).forEach(key => params.set(key, String(data[key])));
+    (daftarBarang || []).forEach(item => {
+      const kode = String(item.id_barang || "").trim();
+      const cocok = kode.match(/^BRG(\d+)$/i);
 
-      const response = await fetch(API_URL + "?" + params.toString(), {
-        method: "GET",
-        cache: "no-store"
-      });
-      const hasil = await response.json();
-
-      if (hasil.status !== "success") {
-        throw new Error(hasil.message || "Gagal menyimpan master barang.");
+      if (cocok) {
+        nomorTerakhir = Math.max(
+          nomorTerakhir,
+          Number(cocok[1]) || 0
+        );
       }
+    });
 
-      result.className = "result success";
-      result.textContent = "✅ " + hasil.message;
+    const idBarang =
+      "BRG" + String(nomorTerakhir + 1).padStart(3, "0");
 
-      resetMasterBarangForm();
-      await loadMasterBarang();
 
-      // Perbarui daftar barang pada transaksi.
-      salesProductsLoaded = false;
-      salesProducts = [];
-      purchaseProductsLoaded = false;
-      purchaseProducts = [];
+    // ==========================================================
+    // 2. SIMPAN MASTER BARANG
+    // ==========================================================
 
-      if (typeof loadStok === "function") await loadStok();
-      await loadDashboard();
+    const { data: barangBaru, error: errorBarang } =
+      await supabaseClient
+        .from("master_barang")
+        .insert({
+          id_barang: idBarang,
+          nama_barang: namaBarang,
+          kategori: kategori,
+          satuan: satuan,
+          harga_beli_terakhir: hargaBeli,
+          hpp_rata_rata: hargaBeli,
+          harga_jual: hargaJual,
+          stok_minimum: stokMinimum,
+          status: "AKTIF",
+          aktif: true
+        })
+        .select()
+        .single();
 
-    } catch (error) {
-      result.className = "result error";
-      result.textContent = "❌ " + error.message;
-      console.error(error);
+    if (errorBarang) {
+      throw errorBarang;
     }
+
+
+    // ==========================================================
+    // 3. SIMPAN STOK AWAL
+    // ==========================================================
+
+    const { error: errorStok } =
+      await supabaseClient
+        .from("stok")
+        .insert({
+          id_barang: idBarang,
+          stok_awal: stokAwal,
+          barang_masuk: 0,
+          terjual: 0,
+          stok_akhir: stokAwal,
+          stok_minimum: stokMinimum,
+          status_stok:
+            stokAwal <= 0
+              ? "HABIS"
+              : stokAwal <= stokMinimum
+                ? "MENIPIS"
+                : "AMAN"
+        });
+
+    if (errorStok) {
+      // Master barang sudah tersimpan.
+      // Kita beri pesan jelas agar tidak diam-diam gagal.
+      throw new Error(
+        "Master barang tersimpan, tetapi stok gagal disimpan: " +
+        errorStok.message
+      );
+    }
+
+
+    // ==========================================================
+    // 4. BERHASIL
+    // ==========================================================
+
+    result.className = "result success";
+    result.textContent =
+      "✅ Barang " + idBarang + " berhasil ditambahkan ke Supabase.";
+
+    resetMasterBarangForm();
+
+    await loadMasterBarang();
+
+    // Bersihkan cache daftar barang transaksi.
+    salesProductsLoaded = false;
+    salesProducts = [];
+
+    purchaseProductsLoaded = false;
+    purchaseProducts = [];
+
+  } catch (error) {
+
+    console.error("SUPABASE TAMBAH BARANG ERROR:", error);
+
+    result.className = "result error";
+    result.textContent =
+      "❌ " + (error.message || "Gagal menyimpan barang.");
+
+  } finally {
 
     button.disabled = false;
-    button.textContent = editId ? "Simpan Perubahan" : "Simpan Barang";
-  });
+    button.textContent = "Simpan Barang";
+
+  }
+});
 
   async function toggleMasterBarang(idBarang, aktif) {
     const aksi = aktif ? "mengaktifkan" : "menonaktifkan";
