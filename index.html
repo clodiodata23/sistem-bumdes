@@ -923,6 +923,7 @@
       <button onclick="showPage('pengeluaran', this)">💸 Pengeluaran</button>
 
       <button onclick="showPage('stok', this)">📋 Stok</button>
+      <button onclick="showPage('master-barang', this)">⚙️ Master Barang</button>
 
       <button onclick="showPage('kas', this)">💰 Kas</button>
       <button onclick="showPage('laporan', this)">📊 Laporan</button>
@@ -1514,6 +1515,109 @@
 
 
 
+    <!-- MASTER BARANG -->
+    <section id="page-master-barang" class="page">
+      <div class="panel">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="section-title" style="margin-bottom:5px;">Master Barang</h2>
+            <div class="help">Kelola data barang BUMDes. Barang dinonaktifkan tanpa menghapus riwayat transaksi.</div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-secondary" type="button" onclick="resetMasterBarangForm()">↺ Form Baru</button>
+            <button class="btn btn-secondary" type="button" onclick="loadMasterBarang()">↻ Refresh</button>
+          </div>
+        </div>
+
+        <div class="panel" style="background:#f8faf9;margin-bottom:18px;">
+          <h3 class="section-title" style="font-size:16px;" id="masterFormTitle">Tambah Barang</h3>
+          <form id="masterBarangForm">
+            <input id="masterEditId" type="hidden">
+            <div class="form-grid">
+              <div>
+                <label for="masterIdBarang">ID Barang</label>
+                <input id="masterIdBarang" placeholder="Contoh: BRG004" required>
+              </div>
+              <div>
+                <label for="masterNamaBarang">Nama Barang</label>
+                <input id="masterNamaBarang" placeholder="Contoh: Pupuk Urea 50 KG" required>
+              </div>
+              <div>
+                <label for="masterKategori">Kategori</label>
+                <input id="masterKategori" placeholder="Contoh: Pupuk" required>
+              </div>
+              <div>
+                <label for="masterSatuan">Satuan</label>
+                <input id="masterSatuan" placeholder="Contoh: Sak" required>
+              </div>
+              <div>
+                <label for="masterHargaBeli">Harga Beli Awal</label>
+                <input id="masterHargaBeli" type="number" min="0" step="1" placeholder="Contoh: 100000" required>
+                <div class="help">Saat edit, harga beli/HPP tidak diubah agar riwayat HPP tetap aman.</div>
+              </div>
+              <div>
+                <label for="masterHargaJual">Harga Jual</label>
+                <input id="masterHargaJual" type="number" min="0" step="1" placeholder="Contoh: 125000" required>
+              </div>
+              <div>
+                <label for="masterStokAwal">Stok Awal</label>
+                <input id="masterStokAwal" type="number" min="0" step="1" placeholder="Contoh: 10" required>
+                <div class="help">Saat edit, stok awal tidak diubah.</div>
+              </div>
+              <div>
+                <label for="masterStokMinimum">Stok Minimum</label>
+                <input id="masterStokMinimum" type="number" min="0" step="1" placeholder="Contoh: 5" required>
+              </div>
+              <div id="masterAktifField" style="display:none;">
+                <label for="masterAktif">Status</label>
+                <select id="masterAktif">
+                  <option value="true">Aktif</option>
+                  <option value="false">Nonaktif</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:15px;">
+              <button class="btn btn-primary" type="submit" id="masterBarangButton">Simpan Barang</button>
+              <button class="btn btn-secondary" type="button" onclick="resetMasterBarangForm()">Batal / Form Baru</button>
+            </div>
+          </form>
+          <div id="masterBarangResult" class="result"></div>
+        </div>
+
+        <div class="table-toolbar">
+          <input id="masterBarangSearch" type="search"
+                 placeholder="🔍 Cari ID, nama, kategori..."
+                 oninput="filterMasterBarang()">
+          <div class="help" id="masterBarangSummary">Memuat data...</div>
+        </div>
+
+        <div class="table-wrap">
+          <table style="min-width:1200px;">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nama Barang</th>
+                <th>Kategori</th>
+                <th>Satuan</th>
+                <th>Harga Beli</th>
+                <th>HPP Rata-rata</th>
+                <th>Harga Jual</th>
+                <th>Minimum</th>
+                <th>Status</th>
+                <th>Margin</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="masterBarangTableBody">
+              <tr><td colspan="11" class="empty-state">Memuat data master barang...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
     <!-- KAS -->
 
     <section id="page-kas" class="page">
@@ -1692,6 +1796,12 @@
 
     }
 
+    if (pageName === "master-barang") {
+
+      loadMasterBarang();
+
+    }
+
 
 
     if (pageName === "penjualan") {
@@ -1844,7 +1954,7 @@
 
     try {
 
-      const response = await fetch(API_URL + "?action=getStok", { cache: "no-store" });
+      const response = await fetch(API_URL + "?action=getMasterBarang", { cache: "no-store" });
 
       const hasil = await response.json();
 
@@ -1858,7 +1968,8 @@
 
 
 
-      salesProducts = Array.isArray(hasil.data) ? hasil.data : [];
+      salesProducts = (Array.isArray(hasil.data) ? hasil.data : [])
+        .filter(item => item.aktif !== false);
 
       salesProductsLoaded = true;
 
@@ -2286,7 +2397,7 @@ const hasil = await response.json();
 
     try {
 
-      const response = await fetch(API_URL + "?action=getStok", { cache: "no-store" });
+      const response = await fetch(API_URL + "?action=getMasterBarang", { cache: "no-store" });
 
       const hasil = await response.json();
 
@@ -2300,7 +2411,8 @@ const hasil = await response.json();
 
 
 
-      purchaseProducts = Array.isArray(hasil.data) ? hasil.data : [];
+      purchaseProducts = (Array.isArray(hasil.data) ? hasil.data : [])
+        .filter(item => item.aktif !== false);
 
       purchaseProductsLoaded = true;
 
@@ -2896,6 +3008,279 @@ const hasil = await response.json();
 
   }
 
+
+
+  // ============================================================
+  // MASTER BARANG
+  // ============================================================
+
+  let masterBarangData = [];
+  let masterBarangEditMode = false;
+
+  async function loadMasterBarang() {
+    const tbody = document.getElementById("masterBarangTableBody");
+    const summary = document.getElementById("masterBarangSummary");
+    const result = document.getElementById("masterBarangResult");
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">⏳ Memuat master barang...</td></tr>';
+    if (summary) summary.textContent = "Memuat data...";
+    if (result) { result.className = "result"; result.textContent = ""; }
+
+    try {
+      const response = await fetch(API_URL + "?action=getMasterBarang&ts=" + Date.now(), {
+        cache: "no-store"
+      });
+      const hasil = await response.json();
+
+      if (hasil.status !== "success") {
+        throw new Error(hasil.message || "Gagal mengambil master barang.");
+      }
+
+      masterBarangData = Array.isArray(hasil.data) ? hasil.data : [];
+      renderMasterBarang(masterBarangData);
+    } catch (error) {
+      masterBarangData = [];
+      tbody.innerHTML = '<tr><td colspan="11" class="empty-state">❌ Master barang gagal dimuat.</td></tr>';
+      if (summary) summary.textContent = "Data gagal dimuat.";
+      if (result) {
+        result.className = "result error";
+        result.textContent = "❌ " + error.message;
+      }
+      console.error(error);
+    }
+  }
+
+  function renderMasterBarang(data) {
+    const tbody = document.getElementById("masterBarangTableBody");
+    const summary = document.getElementById("masterBarangSummary");
+    if (!tbody) return;
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Belum ada barang.</td></tr>';
+      if (summary) summary.textContent = "0 barang";
+      return;
+    }
+
+    tbody.innerHTML = data.map(item => {
+      const aktif = item.aktif !== false;
+      const statusText = aktif ? "AKTIF" : "NONAKTIF";
+      const statusClass = aktif ? "badge-safe" : "badge-empty";
+      const hpp = Number(item.hppRataRata) || 0;
+      const jual = Number(item.hargaJual) || 0;
+      const marginNominal = jual - hpp;
+      const marginPersen = hpp > 0 ? (marginNominal / hpp) * 100 : 0;
+
+      return `
+        <tr>
+          <td>${escapeHtml(item.idBarang)}</td>
+          <td><strong>${escapeHtml(item.namaBarang)}</strong></td>
+          <td>${escapeHtml(item.kategori)}</td>
+          <td>${escapeHtml(item.satuan)}</td>
+          <td>${formatRupiah(item.hargaBeliTerakhir)}</td>
+          <td>${formatRupiah(item.hppRataRata)}</td>
+          <td>${formatRupiah(item.hargaJual)}</td>
+          <td>${formatNumber(item.stokMinimum)}</td>
+          <td><span class="badge ${statusClass}">${statusText}</span></td>
+          <td>${formatRupiah(marginNominal)} (${marginPersen.toFixed(1)}%)</td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn btn-secondary" type="button" onclick="editMasterBarang('${escapeHtml(item.idBarang)}')">✏️ Edit</button>
+              ${
+                aktif
+                ? `<button class="btn btn-secondary" type="button" onclick="toggleMasterBarang('${escapeHtml(item.idBarang)}', false)">🚫 Nonaktifkan</button>`
+                : `<button class="btn btn-primary" type="button" onclick="toggleMasterBarang('${escapeHtml(item.idBarang)}', true)">✓ Aktifkan</button>`
+              }
+            </div>
+          </td>
+        </tr>`;
+    }).join("");
+
+    const aktifCount = data.filter(x => x.aktif !== false).length;
+    const nonaktifCount = data.length - aktifCount;
+    if (summary) {
+      summary.textContent = `${data.length} barang • ${aktifCount} aktif • ${nonaktifCount} nonaktif`;
+    }
+  }
+
+  function filterMasterBarang() {
+    const keyword = String(document.getElementById("masterBarangSearch").value || "").trim().toLowerCase();
+
+    if (!keyword) {
+      renderMasterBarang(masterBarangData);
+      return;
+    }
+
+    const filtered = masterBarangData.filter(item =>
+      String(item.idBarang || "").toLowerCase().includes(keyword) ||
+      String(item.namaBarang || "").toLowerCase().includes(keyword) ||
+      String(item.kategori || "").toLowerCase().includes(keyword) ||
+      String(item.satuan || "").toLowerCase().includes(keyword)
+    );
+
+    renderMasterBarang(filtered);
+  }
+
+  function resetMasterBarangForm() {
+    const form = document.getElementById("masterBarangForm");
+    if (form) form.reset();
+
+    document.getElementById("masterEditId").value = "";
+    document.getElementById("masterIdBarang").disabled = false;
+    document.getElementById("masterHargaBeli").disabled = false;
+    document.getElementById("masterStokAwal").disabled = false;
+    document.getElementById("masterAktifField").style.display = "none";
+    document.getElementById("masterFormTitle").textContent = "Tambah Barang";
+    document.getElementById("masterBarangButton").textContent = "Simpan Barang";
+    document.getElementById("masterBarangResult").className = "result";
+    document.getElementById("masterBarangResult").textContent = "";
+    masterBarangEditMode = false;
+  }
+
+  function editMasterBarang(idBarang) {
+    const item = masterBarangData.find(x => String(x.idBarang) === String(idBarang));
+    if (!item) return;
+
+    masterBarangEditMode = true;
+    document.getElementById("masterEditId").value = item.idBarang;
+    document.getElementById("masterIdBarang").value = item.idBarang;
+    document.getElementById("masterNamaBarang").value = item.namaBarang || "";
+    document.getElementById("masterKategori").value = item.kategori || "";
+    document.getElementById("masterSatuan").value = item.satuan || "";
+    document.getElementById("masterHargaBeli").value = Number(item.hargaBeliTerakhir) || 0;
+    document.getElementById("masterHargaJual").value = Number(item.hargaJual) || 0;
+    document.getElementById("masterStokAwal").value = Number(item.stokAwal) || 0;
+    document.getElementById("masterStokMinimum").value = Number(item.stokMinimum) || 0;
+    document.getElementById("masterAktif").value = item.aktif !== false ? "true" : "false";
+
+    document.getElementById("masterIdBarang").disabled = true;
+    document.getElementById("masterHargaBeli").disabled = true;
+    document.getElementById("masterStokAwal").disabled = true;
+    document.getElementById("masterAktifField").style.display = "block";
+    document.getElementById("masterFormTitle").textContent = "Edit Barang";
+    document.getElementById("masterBarangButton").textContent = "Simpan Perubahan";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  document.getElementById("masterBarangForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const button = document.getElementById("masterBarangButton");
+    const result = document.getElementById("masterBarangResult");
+    const editId = document.getElementById("masterEditId").value.trim();
+
+    const data = {
+      action: editId ? "editBarang" : "tambahBarang",
+      idBarang: editId || document.getElementById("masterIdBarang").value.trim().toUpperCase(),
+      namaBarang: document.getElementById("masterNamaBarang").value.trim(),
+      kategori: document.getElementById("masterKategori").value.trim(),
+      satuan: document.getElementById("masterSatuan").value.trim(),
+      hargaBeli: Number(document.getElementById("masterHargaBeli").value || 0),
+      hargaJual: Number(document.getElementById("masterHargaJual").value || 0),
+      stokAwal: Number(document.getElementById("masterStokAwal").value || 0),
+      stokMinimum: Number(document.getElementById("masterStokMinimum").value || 0),
+      aktif: editId ? document.getElementById("masterAktif").value === "true" : true
+    };
+
+    if (!data.idBarang || !data.namaBarang || !data.kategori || !data.satuan) {
+      result.className = "result error";
+      result.textContent = "❌ ID, nama, kategori, dan satuan wajib diisi.";
+      return;
+    }
+
+    if (data.hargaBeli < 0 || data.hargaJual < 0 || data.stokAwal < 0 || data.stokMinimum < 0) {
+      result.className = "result error";
+      result.textContent = "❌ Nilai harga dan stok tidak boleh negatif.";
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = editId ? "Menyimpan..." : "Menambahkan...";
+    result.className = "result";
+    result.textContent = "";
+
+    try {
+      const params = new URLSearchParams();
+      Object.keys(data).forEach(key => params.set(key, String(data[key])));
+
+      const response = await fetch(API_URL + "?" + params.toString(), {
+        method: "GET",
+        cache: "no-store"
+      });
+      const hasil = await response.json();
+
+      if (hasil.status !== "success") {
+        throw new Error(hasil.message || "Gagal menyimpan master barang.");
+      }
+
+      result.className = "result success";
+      result.textContent = "✅ " + hasil.message;
+
+      resetMasterBarangForm();
+      await loadMasterBarang();
+
+      // Perbarui daftar barang pada transaksi.
+      salesProductsLoaded = false;
+      salesProducts = [];
+      purchaseProductsLoaded = false;
+      purchaseProducts = [];
+
+      if (typeof loadStok === "function") await loadStok();
+      await loadDashboard();
+
+    } catch (error) {
+      result.className = "result error";
+      result.textContent = "❌ " + error.message;
+      console.error(error);
+    }
+
+    button.disabled = false;
+    button.textContent = editId ? "Simpan Perubahan" : "Simpan Barang";
+  });
+
+  async function toggleMasterBarang(idBarang, aktif) {
+    const aksi = aktif ? "mengaktifkan" : "menonaktifkan";
+    if (!confirm(`Yakin ingin ${aksi} barang ${idBarang}?`)) return;
+
+    const result = document.getElementById("masterBarangResult");
+    result.className = "result";
+    result.textContent = "";
+
+    try {
+      const params = new URLSearchParams({
+        action: "ubahStatusBarang",
+        idBarang: idBarang,
+        aktif: String(aktif)
+      });
+
+      const response = await fetch(API_URL + "?" + params.toString(), {
+        method: "GET",
+        cache: "no-store"
+      });
+      const hasil = await response.json();
+
+      if (hasil.status !== "success") {
+        throw new Error(hasil.message || "Gagal mengubah status barang.");
+      }
+
+      result.className = "result success";
+      result.textContent = "✅ " + hasil.message;
+
+      salesProductsLoaded = false;
+      salesProducts = [];
+      purchaseProductsLoaded = false;
+      purchaseProducts = [];
+
+      await loadMasterBarang();
+      await loadDashboard();
+
+    } catch (error) {
+      result.className = "result error";
+      result.textContent = "❌ " + error.message;
+      console.error(error);
+    }
+  }
 
 
   // ============================================================
