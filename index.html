@@ -3212,12 +3212,16 @@ const hasil = await response.json();
       aktif: editId ? document.getElementById("masterAktif").value === "true" : true
     };
 
-    if (!data.idBarang || !data.namaBarang || !data.kategori || !data.satuan) {
-      result.className = "result error";
-      result.textContent = "❌ ID, nama, kategori, dan satuan wajib diisi.";
-      return;
-    }
-
+    // if (!data.idBarang || !data.namaBarang || !data.kategori || !data.satuan) {
+    //   result.className = "result error";
+    //   result.textContent = "❌ ID, nama, kategori, dan satuan wajib diisi.";
+    //   return;
+    // }
+    if (!data.namaBarang || !data.kategori || !data.satuan) {
+  result.className = "result error";
+  result.textContent = "❌ Nama, kategori, dan satuan wajib diisi.";
+  return;
+}
     if (data.hargaBeli < 0 || data.hargaJual < 0 || data.stokAwal < 0 || data.stokMinimum < 0) {
       result.className = "result error";
       result.textContent = "❌ Nilai harga dan stok tidak boleh negatif.";
