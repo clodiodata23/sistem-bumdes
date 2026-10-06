@@ -1645,9 +1645,9 @@ html, body {
 
               <label for="expenseJumlah">Jumlah</label>
 
-              <input id="expenseJumlah" type="number" min="1" step="1"
-
-                     placeholder="Contoh: 50000" required>
+              <input id="expenseJumlah" type="text" inputmode="numeric"
+                     placeholder="Contoh: Rp50.000"
+                     oninput="formatHargaInput(this)" required>
 
             </div>
 
@@ -2552,23 +2552,31 @@ function ambilAngkaHarga(value) {
 
     try {
 
-      // Simpan langsung ke Supabase melalui RPC.
-      // RPC menangani transaksi penjualan dan pengurangan stok secara atomik.
-      const { data: hasil, error } = await supabaseClient.rpc("simpan_penjualan", {
-        p_id_barang: data.idBarang,
-        p_qty: data.qty,
-        p_pembayaran: data.pembayaran,
-        p_keterangan: data.keterangan,
-        p_link_nota: data.linkNota
-      });
+      const params = new URLSearchParams({
 
-      if (error) {
-        throw error;
-      }
+  action: "simpanPenjualan",
 
-      if (!hasil || hasil.status !== "success") {
-        throw new Error(hasil?.message || "Gagal menyimpan penjualan.");
-      }
+  idBarang: data.idBarang,
+
+  qty: data.qty,
+
+  pembayaran: data.pembayaran,
+
+  keterangan: data.keterangan,
+
+  linkNota: data.linkNota
+
+});
+
+
+
+const response = await fetch(API_URL + "?" + params.toString());
+
+
+
+const hasil = await response.json();
+
+
 
       if (hasil.status === "success") {
 
