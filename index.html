@@ -2760,17 +2760,17 @@ const hasil = await response.json();
 
       // Perbarui semua data yang terlihat tanpa reload browser.
 
-      // await loadDashboard();
+      await loadDashboard();
 
 
 
       // Perbarui stok jika halaman Stok sudah pernah dibuka.
 
-      // if (typeof loadStok === "function") {
+      if (typeof loadStok === "function") {
 
-      //   await loadStok();
+        await loadStok();
 
-      // }
+      }
 
 
 
@@ -2780,7 +2780,7 @@ const hasil = await response.json();
 
       purchaseProducts = [];
 
-
+      await loadPurchaseProducts();
 
 
 
