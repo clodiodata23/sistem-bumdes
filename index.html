@@ -1634,25 +1634,52 @@
         <div class="table-toolbar">
           <div>
             <h2 class="section-title" style="margin-bottom:5px;">Kas</h2>
-            <div class="help">Data kas diambil langsung dari sheet KAS Google Sheets.</div>
+            <div class="help">Data kas diambil langsung dari Supabase. Penjualan tunai otomatis menjadi kas masuk, sedangkan pembelian tunai otomatis menjadi kas keluar.</div>
           </div>
           <button class="btn btn-secondary" type="button" onclick="loadKas()">↻ Perbarui Kas</button>
         </div>
+
         <div class="cards" style="grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:18px;">
-          <div class="card"><div class="metric-label">Kas Masuk</div><div class="metric-value" id="kasTotalMasuk">Rp0</div></div>
-          <div class="card"><div class="metric-label">Kas Keluar</div><div class="metric-value" id="kasTotalKeluar">Rp0</div></div>
-          <div class="card"><div class="metric-label">Saldo Akhir</div><div class="metric-value" id="kasSaldoAkhir">Rp0</div></div>
+          <div class="card">
+            <div class="metric-label">Kas Masuk</div>
+            <div class="metric-value" id="kasTotalMasuk">Rp0</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Kas Keluar</div>
+            <div class="metric-value" id="kasTotalKeluar">Rp0</div>
+          </div>
+          <div class="card">
+            <div class="metric-label">Saldo Akhir</div>
+            <div class="metric-value" id="kasSaldoAkhir">Rp0</div>
+          </div>
         </div>
+
         <div class="table-toolbar">
           <input id="kasSearch" type="search" placeholder="Cari transaksi kas..." oninput="filterKas()">
           <div class="help" id="kasSummary">Memuat data kas...</div>
         </div>
+
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID Kas</th><th>Tanggal</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th>Kas Masuk</th><th>Kas Keluar</th><th>Saldo</th><th>Referensi</th></tr></thead>
-            <tbody id="kasTableBody"><tr><td colspan="9" class="empty-state">Memuat data kas...</td></tr></tbody>
+            <thead>
+              <tr>
+                <th>ID Kas</th>
+                <th>Tanggal</th>
+                <th>Jenis</th>
+                <th>Kategori</th>
+                <th>Keterangan</th>
+                <th>Kas Masuk</th>
+                <th>Kas Keluar</th>
+                <th>Saldo</th>
+                <th>Referensi</th>
+              </tr>
+            </thead>
+            <tbody id="kasTableBody">
+              <tr><td colspan="9" class="empty-state">Memuat data kas...</td></tr>
+            </tbody>
           </table>
         </div>
+
         <div id="kasResult" class="result"></div>
       </div>
     </section>
@@ -2196,101 +2223,183 @@ function ambilAngkaHarga(value) {
 
   // ============================================================
 
+  // SIMPAN PENJUALAN
+
   // ============================================================
-  // SIMPAN PENJUALAN - SUPABASE
-  // ============================================================
+
+
 
   document.getElementById("salesForm").addEventListener("submit", async function(event) {
 
     event.preventDefault();
 
+
+
     const button = document.getElementById("salesButton");
+
     const result = document.getElementById("salesResult");
 
+
+
     const data = {
+
+      action: "simpanPenjualan",
+
       idBarang: document.getElementById("idBarang").value.trim(),
+
       qty: Number(document.getElementById("qty").value),
+
       pembayaran: document.getElementById("pembayaran").value,
+
       keterangan: document.getElementById("keterangan").value.trim(),
+
       linkNota: document.getElementById("linkNota").value.trim()
+
     };
 
+
+
     if (!data.idBarang || data.qty <= 0) {
+
       result.className = "result error";
+
       result.textContent = "Pilih barang dan isi jumlah penjualan terlebih dahulu.";
+
       return;
+
     }
 
-    const selectedProduct = salesProducts.find(
-      x => String(x.idBarang) === String(data.idBarang)
-    );
 
-    if (!selectedProduct) {
-      result.className = "result error";
-      result.textContent = "Data barang belum termuat. Pilih kembali barang dari daftar.";
-      return;
+
+    const selectedProduct = salesProducts.find(x => String(x.idBarang) === String(data.idBarang));
+
+    if (selectedProduct) {
+
+      const stokTersedia = Number(selectedProduct.stokAkhir) || 0;
+
+      if (data.qty > stokTersedia) {
+
+        result.className = "result error";
+
+        result.textContent = `❌ Stok ${selectedProduct.namaBarang} tidak mencukupi. Stok tersedia: ${formatNumber(stokTersedia)}.`;
+
+        return;
+
+      }
+
     }
 
-    const stokTersedia = Number(selectedProduct.stokAkhir) || 0;
 
-    if (data.qty > stokTersedia) {
-      result.className = "result error";
-      result.textContent = `❌ Stok ${selectedProduct.namaBarang} tidak mencukupi. Stok tersedia: ${formatNumber(stokTersedia)}.`;
-      return;
-    }
 
     button.disabled = true;
+
     button.textContent = "Menyimpan...";
+
+
+
     result.className = "result";
+
     result.textContent = "";
 
+
+
     try {
-      // Satu RPC menangani penyimpanan penjualan + pengurangan stok.
-      const { data: hasil, error } = await supabaseClient.rpc("simpan_penjualan", {
-        p_id_barang: data.idBarang,
-        p_qty: data.qty,
-        p_pembayaran: data.pembayaran,
-        p_keterangan: data.keterangan,
-        p_link_nota: data.linkNota
-      });
 
-      if (error) {
-        throw error;
+      const params = new URLSearchParams({
+
+  action: "simpanPenjualan",
+
+  idBarang: data.idBarang,
+
+  qty: data.qty,
+
+  pembayaran: data.pembayaran,
+
+  keterangan: data.keterangan,
+
+  linkNota: data.linkNota
+
+});
+
+
+
+const response = await fetch(API_URL + "?" + params.toString());
+
+
+
+const hasil = await response.json();
+
+
+
+      if (hasil.status === "success") {
+
+        result.className = "result success";
+
+        result.innerHTML =
+
+          "✅ Penjualan berhasil disimpan.<br>" +
+
+          "ID: <strong>" + hasil.idPenjualan + "</strong><br>" +
+
+          "Total: <strong>" + formatRupiah(hasil.total) + "</strong><br>" +
+
+          "Laba kotor: <strong>" + formatRupiah(hasil.labaKotor) + "</strong>";
+
+
+
+        document.getElementById("salesForm").reset();
+
+        document.getElementById("salesProductInfo").className = "sales-product-info";
+
+        document.getElementById("salesProductInfo").textContent = "Pilih barang dari daftar.";
+
+        salesProductsLoaded = false;
+
+        salesProducts = [];
+
+
+
+        // Simpan lebih cepat: tidak melakukan request tambahan.
+        salesProductsLoaded = false;
+        salesProducts = [];
+
+
+
+      } else {
+
+        throw new Error(hasil.message || "Gagal menyimpan transaksi.");
+
       }
 
-      if (!hasil || hasil.status !== "success") {
-        throw new Error(hasil?.message || "Gagal menyimpan penjualan.");
-      }
 
-      result.className = "result success";
-      result.innerHTML =
-        "✅ Penjualan berhasil disimpan.<br>" +
-        "ID: <strong>" + escapeHtml(hasil.idPenjualan) + "</strong><br>" +
-        "Barang: <strong>" + escapeHtml(hasil.namaBarang) + "</strong><br>" +
-        "Jumlah terjual: <strong>" + formatNumber(hasil.qty) + "</strong><br>" +
-        "Total: <strong>" + formatRupiah(hasil.total) + "</strong><br>" +
-        "HPP: <strong>" + formatRupiah(hasil.totalHPP) + "</strong><br>" +
-        "Laba kotor: <strong>" + formatRupiah(hasil.labaKotor) + "</strong><br>" +
-        "Stok sekarang: <strong>" + formatNumber(hasil.stokSekarang) + "</strong>";
-
-      document.getElementById("salesForm").reset();
-      document.getElementById("salesProductInfo").className = "sales-product-info";
-      document.getElementById("salesProductInfo").textContent = "Pilih barang dari daftar.";
-
-      salesProductsLoaded = false;
-      salesProducts = [];
 
     } catch (error) {
+
       result.className = "result error";
-      result.textContent = "❌ " + (error.message || "Gagal menyimpan penjualan.");
-      console.error("SUPABASE SALES ERROR:", error);
-    } finally {
-      button.disabled = false;
-      button.textContent = "Simpan Penjualan";
+
+      result.textContent = "❌ " + error.message;
+
+      console.error(error);
+
     }
+
+
+
+    button.disabled = false;
+
+    button.textContent = "Simpan Penjualan";
+
   });
 
 
+
+
+
+
+
+
+
+  // ============================================================
 
   // DATA BARANG UNTUK BARANG MASUK
 
@@ -3852,7 +3961,7 @@ function ambilAngkaHarga(value) {
 
 
   // ============================================================
-  // KAS
+  // KAS — SUPABASE
   // ============================================================
 
   let kasData = [];
@@ -3861,61 +3970,171 @@ function ambilAngkaHarga(value) {
     const body = document.getElementById("kasTableBody");
     const summary = document.getElementById("kasSummary");
     const result = document.getElementById("kasResult");
+
     if (!body) return;
+
     body.innerHTML = '<tr><td colspan="9" class="empty-state">Memuat data kas...</td></tr>';
     if (summary) summary.textContent = "Memuat data kas...";
-    if (result) { result.className = "result"; result.textContent = ""; }
+    if (result) {
+      result.className = "result";
+      result.textContent = "";
+    }
+
     try {
-      const response = await fetch(API_URL + "?action=getKas&ts=" + Date.now(), { cache: "no-store" });
-      const hasil = await response.json();
-      if (hasil.status !== "success") throw new Error(hasil.message || "Gagal mengambil data kas.");
-      kasData = Array.isArray(hasil.data) ? hasil.data : [];
-      const s = hasil.summary || {};
-      document.getElementById("kasTotalMasuk").textContent = formatRupiah(Number(s.totalMasuk) || 0);
-      document.getElementById("kasTotalKeluar").textContent = formatRupiah(Number(s.totalKeluar) || 0);
-      document.getElementById("kasSaldoAkhir").textContent = formatRupiah(Number(s.saldoAkhir) || 0);
+      const { data, error } = await supabaseClient
+        .from("kas")
+        .select("id_kas,tanggal,jenis,kategori,keterangan,debit,kredit,referensi")
+        .order("tanggal", { ascending: true });
+
+      if (error) throw error;
+
+      let saldo = 0;
+      let totalMasuk = 0;
+      let totalKeluar = 0;
+
+      kasData = (Array.isArray(data) ? data : []).map(item => {
+        const debit = Number(item.debit) || 0;
+        const kredit = Number(item.kredit) || 0;
+
+        totalMasuk += debit;
+        totalKeluar += kredit;
+        saldo += debit - kredit;
+
+        return {
+          idKas: item.id_kas || "",
+          tanggal: item.tanggal || "",
+          jenis: String(item.jenis || "").toUpperCase(),
+          kategori: item.kategori || "",
+          keterangan: item.keterangan || "",
+          debit,
+          kredit,
+          saldo,
+          referensi: item.referensi || ""
+        };
+      });
+
+      const saldoAkhir = totalMasuk - totalKeluar;
+
+      document.getElementById("kasTotalMasuk").textContent = formatRupiah(totalMasuk);
+      document.getElementById("kasTotalKeluar").textContent = formatRupiah(totalKeluar);
+      document.getElementById("kasSaldoAkhir").textContent = formatRupiah(saldoAkhir);
+
       renderKas(kasData);
+
+      if (result) {
+        result.className = "result success";
+        result.textContent = "✓ Data kas berhasil dimuat dari Supabase.";
+      }
+
     } catch (error) {
       kasData = [];
+
       body.innerHTML = '<tr><td colspan="9" class="empty-state">❌ Data kas gagal dimuat.</td></tr>';
+
       if (summary) summary.textContent = "Gagal memuat data kas.";
-      if (result) { result.className = "result error"; result.textContent = "❌ " + error.message; }
-      console.error("loadKas:", error);
+
+      if (result) {
+        result.className = "result error";
+        result.textContent = "❌ " + (error.message || "Gagal mengambil data kas.");
+      }
+
+      console.error("loadKas Supabase:", error);
     }
   }
 
   function renderKas(data) {
     const body = document.getElementById("kasTableBody");
     const summary = document.getElementById("kasSummary");
+
     if (!body) return;
+
     if (!Array.isArray(data) || !data.length) {
       body.innerHTML = '<tr><td colspan="9" class="empty-state">Belum ada transaksi kas.</td></tr>';
-      if (summary) summary.textContent = "0 transaksi";
+
+      if (summary) {
+        summary.textContent = "0 transaksi";
+      }
+
       return;
     }
+
     body.innerHTML = data.map(item => {
       const jenis = String(item.jenis || "").toUpperCase();
       const debit = Number(item.debit) || 0;
       const kredit = Number(item.kredit) || 0;
       const saldo = Number(item.saldo) || 0;
-      const badgeClass = jenis === "MASUK" ? "badge-safe" : "badge-danger";
-      return `<tr><td>${escapeHtml(item.idKas || "-")}</td><td>${escapeHtml(formatKasDate(item.tanggal))}</td><td><span class="badge ${badgeClass}">${escapeHtml(jenis || "-")}</span></td><td>${escapeHtml(item.kategori || "-")}</td><td>${escapeHtml(item.keterangan || "-")}</td><td>${debit > 0 ? formatRupiah(debit) : "-"}</td><td>${kredit > 0 ? formatRupiah(kredit) : "-"}</td><td>${formatRupiah(saldo)}</td><td>${escapeHtml(item.referensi || "-")}</td></tr>`;
+
+      const badgeClass = jenis === "MASUK"
+        ? "badge-safe"
+        : "badge-danger";
+
+      return `
+        <tr>
+          <td>${escapeHtml(item.idKas || "-")}</td>
+          <td>${escapeHtml(formatKasDate(item.tanggal))}</td>
+          <td>
+            <span class="badge ${badgeClass}">
+              ${escapeHtml(jenis || "-")}
+            </span>
+          </td>
+          <td>${escapeHtml(item.kategori || "-")}</td>
+          <td>${escapeHtml(item.keterangan || "-")}</td>
+          <td>${debit > 0 ? formatRupiah(debit) : "-"}</td>
+          <td>${kredit > 0 ? formatRupiah(kredit) : "-"}</td>
+          <td>${formatRupiah(saldo)}</td>
+          <td>${escapeHtml(item.referensi || "-")}</td>
+        </tr>
+      `;
     }).join("");
-    if (summary) summary.textContent = data.length + " transaksi";
+
+    if (summary) {
+      summary.textContent = data.length + " transaksi";
+    }
   }
 
   function filterKas() {
     const input = document.getElementById("kasSearch");
     const keyword = String(input ? input.value : "").trim().toLowerCase();
-    if (!keyword) return renderKas(kasData);
-    renderKas(kasData.filter(item => [item.idKas,item.tanggal,item.jenis,item.kategori,item.keterangan,item.debit,item.kredit,item.saldo,item.referensi].join(" ").toLowerCase().includes(keyword)));
+
+    if (!keyword) {
+      renderKas(kasData);
+      return;
+    }
+
+    const hasil = kasData.filter(item => {
+      return [
+        item.idKas,
+        item.tanggal,
+        item.jenis,
+        item.kategori,
+        item.keterangan,
+        item.debit,
+        item.kredit,
+        item.saldo,
+        item.referensi
+      ]
+      .join(" ")
+      .toLowerCase()
+      .includes(keyword);
+    });
+
+    renderKas(hasil);
   }
 
   function formatKasDate(value) {
     if (!value) return "-";
+
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return new Intl.DateTimeFormat("id-ID", {day:"2-digit",month:"2-digit",year:"numeric"}).format(date);
+
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
+
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    }).format(date);
   }
 
   // ============================================================
