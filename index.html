@@ -1297,90 +1297,138 @@
 
       <div class="panel">
 
-        <div class="table-toolbar">
-          <div>
-            <h2 class="section-title" style="margin-bottom:5px;">Input Pengeluaran</h2>
-            <div class="help">
-              Pengeluaran operasional disimpan langsung ke Supabase.
-              Jika pembayaran Tunai, Kas Keluar dibuat otomatis.
-            </div>
-          </div>
-        </div>
+        <h2 class="section-title">Input Pengeluaran</h2>
+
+
 
         <form id="expenseForm">
 
           <div class="form-grid">
 
             <div>
+
               <label for="expenseKategori">Kategori</label>
+
               <select id="expenseKategori" required>
+
                 <option value="">Pilih kategori</option>
+
                 <option value="ATK">ATK</option>
+
                 <option value="Transportasi">Transportasi</option>
+
                 <option value="Honor">Honor</option>
+
                 <option value="Listrik">Listrik</option>
+
                 <option value="Administrasi">Administrasi</option>
+
                 <option value="Pemeliharaan">Pemeliharaan</option>
+
                 <option value="Operasional">Operasional</option>
+
                 <option value="Lainnya">Lainnya</option>
+
               </select>
+
             </div>
 
+
+
             <div>
+
               <label for="expenseJumlah">Jumlah</label>
-              <input id="expenseJumlah"
-                     type="text"
-                     inputmode="numeric"
-                     placeholder="Contoh: Rp50.000"
-                     oninput="formatHargaInput(this)"
-                     required>
+
+              <input id="expenseJumlah" type="number" min="1" step="1"
+
+                     placeholder="Contoh: 50000" required>
+
             </div>
 
+
+
             <div>
+
               <label for="expensePembayaran">Metode Pembayaran</label>
+
               <select id="expensePembayaran">
+
                 <option value="Tunai">Tunai</option>
+
                 <option value="Transfer">Transfer</option>
+
               </select>
+
             </div>
 
+
+
             <div>
+
               <label for="expenseReferensi">Referensi</label>
+
               <input id="expenseReferensi" placeholder="Opsional">
+
             </div>
 
+
+
             <div>
+
               <label for="expenseLinkNota">Link Nota</label>
+
               <input id="expenseLinkNota" placeholder="Opsional">
+
             </div>
 
+
+
             <div>
+
               <label for="expenseKeterangan">Keterangan</label>
+
               <input id="expenseKeterangan"
+
                      placeholder="Contoh: Beli buku nota"
+
                      required>
+
             </div>
 
           </div>
 
+
+
           <div>
+
             <button class="btn btn-primary" type="submit" id="expenseButton">
+
               Simpan Pengeluaran
+
             </button>
+
           </div>
 
         </form>
 
+
+
         <div id="expenseResult" class="result"></div>
 
-        <div class="help" style="margin-top:12px;">
-          Contoh: ATK Rp20.000 dibayar Tunai → Pengeluaran tercatat Rp20.000
-          dan Kas Keluar otomatis bertambah Rp20.000. Pengeluaran tidak mengubah stok.
-        </div>
+
+
+        <p class="help">
+
+          Pengeluaran akan masuk ke sheet PENGELUARAN. Jika pembayaran Tunai,
+
+          transaksi juga otomatis dicatat sebagai Kas Keluar.
+
+        </p>
 
       </div>
 
     </section>
+
 
 
     <!-- STOK -->
@@ -1586,52 +1634,25 @@
         <div class="table-toolbar">
           <div>
             <h2 class="section-title" style="margin-bottom:5px;">Kas</h2>
-            <div class="help">Data kas diambil langsung dari Supabase. Penjualan tunai otomatis menjadi kas masuk, sedangkan pembelian tunai otomatis menjadi kas keluar.</div>
+            <div class="help">Data kas diambil langsung dari sheet KAS Google Sheets.</div>
           </div>
           <button class="btn btn-secondary" type="button" onclick="loadKas()">↻ Perbarui Kas</button>
         </div>
-
         <div class="cards" style="grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:18px;">
-          <div class="card">
-            <div class="metric-label">Kas Masuk</div>
-            <div class="metric-value" id="kasTotalMasuk">Rp0</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Kas Keluar</div>
-            <div class="metric-value" id="kasTotalKeluar">Rp0</div>
-          </div>
-          <div class="card">
-            <div class="metric-label">Saldo Akhir</div>
-            <div class="metric-value" id="kasSaldoAkhir">Rp0</div>
-          </div>
+          <div class="card"><div class="metric-label">Kas Masuk</div><div class="metric-value" id="kasTotalMasuk">Rp0</div></div>
+          <div class="card"><div class="metric-label">Kas Keluar</div><div class="metric-value" id="kasTotalKeluar">Rp0</div></div>
+          <div class="card"><div class="metric-label">Saldo Akhir</div><div class="metric-value" id="kasSaldoAkhir">Rp0</div></div>
         </div>
-
         <div class="table-toolbar">
           <input id="kasSearch" type="search" placeholder="Cari transaksi kas..." oninput="filterKas()">
           <div class="help" id="kasSummary">Memuat data kas...</div>
         </div>
-
         <div class="table-wrap">
           <table>
-            <thead>
-              <tr>
-                <th>ID Kas</th>
-                <th>Tanggal</th>
-                <th>Jenis</th>
-                <th>Kategori</th>
-                <th>Keterangan</th>
-                <th>Kas Masuk</th>
-                <th>Kas Keluar</th>
-                <th>Saldo</th>
-                <th>Referensi</th>
-              </tr>
-            </thead>
-            <tbody id="kasTableBody">
-              <tr><td colspan="9" class="empty-state">Memuat data kas...</td></tr>
-            </tbody>
+            <thead><tr><th>ID Kas</th><th>Tanggal</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th>Kas Masuk</th><th>Kas Keluar</th><th>Saldo</th><th>Referensi</th></tr></thead>
+            <tbody id="kasTableBody"><tr><td colspan="9" class="empty-state">Memuat data kas...</td></tr></tbody>
           </table>
         </div>
-
         <div id="kasResult" class="result"></div>
       </div>
     </section>
@@ -2723,89 +2744,228 @@ const hasil = await response.json();
 
   // ============================================================
 
-  // SIMPAN PENGELUARAN — SUPABASE
+  // SIMPAN PENGELUARAN
+
   // ============================================================
 
+
+
   document.getElementById("expenseForm").addEventListener("submit", async function(event) {
+
     event.preventDefault();
 
+
+
     const button = document.getElementById("expenseButton");
+
     const result = document.getElementById("expenseResult");
 
-    const kategori = document.getElementById("expenseKategori").value;
-    const keterangan = document.getElementById("expenseKeterangan").value.trim();
-    const jumlah = ambilAngkaHarga(document.getElementById("expenseJumlah").value);
-    const pembayaran = document.getElementById("expensePembayaran").value;
-    const referensi = document.getElementById("expenseReferensi").value.trim();
-    const linkNota = document.getElementById("expenseLinkNota").value.trim();
 
-    if (!kategori || !keterangan || jumlah <= 0) {
+
+    const data = {
+
+      action: "simpanPengeluaran",
+
+      kategori: document.getElementById("expenseKategori").value,
+
+      keterangan: document.getElementById("expenseKeterangan").value.trim(),
+
+      jumlah: ambilAngkaHarga(document.getElementById("expenseJumlah").value),
+
+      pembayaran: document.getElementById("expensePembayaran").value,
+
+      referensi: document.getElementById("expenseReferensi").value.trim(),
+
+      linkNota: document.getElementById("expenseLinkNota").value.trim()
+
+    };
+
+
+
+    if (!data.kategori || !data.keterangan || data.jumlah <= 0) {
+
       result.className = "result error";
+
       result.textContent = "❌ Kategori, keterangan, dan jumlah wajib diisi.";
+
       return;
+
     }
 
+
+
     button.disabled = true;
+
     button.textContent = "Menyimpan...";
+
     result.className = "result";
+
     result.textContent = "";
 
+
+
     try {
-      const idPengeluaran =
-        "OUT" +
-        new Date().toISOString().replace(/\D/g, "").slice(0, 14) +
-        Math.floor(Math.random() * 1000).toString().padStart(3, "0");
 
-      const { data, error } = await supabaseClient
-        .from("pengeluaran")
-        .insert([{
-          id_pengeluaran: idPengeluaran,
-          tanggal: new Date().toISOString(),
-          kategori: kategori,
-          keterangan: keterangan,
-          jumlah: jumlah,
-          pembayaran: pembayaran,
-          referensi: referensi || null,
-          link_nota: linkNota || null
-        }])
-        .select()
-        .single();
+      const params = new URLSearchParams();
 
-      if (error) {
-        throw error;
+      params.set("action", data.action);
+
+      params.set("kategori", data.kategori);
+
+      params.set("keterangan", data.keterangan);
+
+      params.set("jumlah", String(data.jumlah));
+
+      params.set("pembayaran", data.pembayaran);
+
+      params.set("referensi", data.referensi);
+
+      params.set("linkNota", data.linkNota);
+
+
+
+      const response = await fetch(API_URL + "?" + params.toString(), {
+
+        method: "GET",
+
+        cache: "no-store"
+
+      });
+
+
+
+      const hasil = await response.json();
+
+
+
+      if (hasil.status !== "success") {
+
+        throw new Error(hasil.message || "Gagal menyimpan pengeluaran.");
+
       }
+
+
 
       result.className = "result success";
 
-      let pesan =
+      result.innerHTML =
+
         "✅ Pengeluaran berhasil disimpan.<br>" +
-        "ID: <strong>" + escapeHtml(data.id_pengeluaran) + "</strong><br>" +
-        "Kategori: <strong>" + escapeHtml(data.kategori) + "</strong><br>" +
-        "Jumlah: <strong>" + formatRupiah(Number(data.jumlah) || 0) + "</strong><br>" +
-        "Pembayaran: <strong>" + escapeHtml(data.pembayaran) + "</strong>";
 
-      if (String(data.pembayaran).toLowerCase() === "tunai") {
-        pesan += "<br>💰 <strong>Kas Keluar otomatis tercatat.</strong>";
-      } else {
-        pesan += "<br>ℹ️ Pembayaran non-tunai tidak menambah Kas Keluar tunai.";
-      }
+        "ID: <strong>" + escapeHtml(hasil.idPengeluaran) + "</strong><br>" +
 
-      result.innerHTML = pesan;
+        "Jumlah: <strong>" + formatRupiah(hasil.jumlah) + "</strong>";
+
+
 
       document.getElementById("expenseForm").reset();
 
-    } catch (error) {
-      result.className = "result error";
-      result.textContent =
-        "❌ Gagal menyimpan pengeluaran: " +
-        (error.message || "Terjadi kesalahan.");
 
-      console.error("simpanPengeluaran Supabase:", error);
-    } finally {
-      button.disabled = false;
-      button.textContent = "Simpan Pengeluaran";
+
+      // Dashboard akan diperbarui saat halaman Dashboard dibuka atau di-refresh.
+
+
+
+    } catch (error) {
+
+      result.className = "result error";
+
+      result.textContent = "❌ " + error.message;
+
+      console.error(error);
+
     }
+
+
+
+    button.disabled = false;
+
+    button.textContent = "Simpan Pengeluaran";
+
   });
+
+
+
+  // ============================================================
+
+  // DATA DASHBOARD
+
+  // ============================================================
+
+
+
+  async function loadDashboard() {
+
+    try {
+
+      const response = await fetch(API_URL + "?action=getDashboard&ts=" + Date.now(), {
+
+        method: "GET",
+
+        cache: "no-store"
+
+      });
+
+      const hasil = await response.json();
+
+
+
+      if (hasil.status !== "success") {
+
+        throw new Error(hasil.message || "Gagal mengambil data dashboard.");
+
+      }
+
+
+
+      const d = hasil.data || {};
+
+
+
+      document.getElementById("dashSaldoKas").textContent = formatRupiah(d.saldoKas);
+
+      document.getElementById("dashPenjualan").textContent = formatRupiah(d.totalPenjualan);
+
+      document.getElementById("dashLabaKotor").textContent = formatRupiah(d.labaKotor);
+
+      document.getElementById("dashPengeluaran").textContent = formatRupiah(d.pengeluaranOperasional);
+
+      document.getElementById("dashPembelian").textContent = formatRupiah(d.totalPembelian);
+
+      document.getElementById("dashLabaBersih").textContent = formatRupiah(d.labaBersih);
+
+      document.getElementById("dashStokMenipis").textContent = formatNumber(d.stokMenipis);
+
+      document.getElementById("dashStokHabis").textContent = formatNumber(d.stokHabis);
+
+
+
+      document.getElementById("dashboardInventorySummary").innerHTML =
+
+        "📦 <strong>" + formatNumber(d.totalJenisBarang) + "</strong> jenis barang • " +
+
+        "<strong>" + formatNumber(d.stokAman) + "</strong> aman • " +
+
+        "<strong>" + formatNumber(d.stokMenipis) + "</strong> menipis • " +
+
+        "<strong>" + formatNumber(d.stokHabis) + "</strong> habis";
+
+
+
+      document.getElementById("dashboardStatus").textContent =
+
+        "✅ Data dashboard berhasil diperbarui dari Google Sheets.";
+
+    } catch (error) {
+
+      document.getElementById("dashboardStatus").textContent = "❌ " + error.message;
+
+      console.error(error);
+
+    }
+
+  }
+
 
 
   // ============================================================
@@ -3774,7 +3934,7 @@ const hasil = await response.json();
 
 
   // ============================================================
-  // KAS — SUPABASE
+  // KAS
   // ============================================================
 
   let kasData = [];
@@ -3794,6 +3954,7 @@ const hasil = await response.json();
     }
 
     try {
+      // Kas sekarang dibaca langsung dari Supabase.
       const { data, error } = await supabaseClient
         .from("kas")
         .select("id_kas,tanggal,jenis,kategori,keterangan,debit,kredit,referensi")
@@ -3826,11 +3987,9 @@ const hasil = await response.json();
         };
       });
 
-      const saldoAkhir = totalMasuk - totalKeluar;
-
       document.getElementById("kasTotalMasuk").textContent = formatRupiah(totalMasuk);
       document.getElementById("kasTotalKeluar").textContent = formatRupiah(totalKeluar);
-      document.getElementById("kasSaldoAkhir").textContent = formatRupiah(saldoAkhir);
+      document.getElementById("kasSaldoAkhir").textContent = formatRupiah(totalMasuk - totalKeluar);
 
       renderKas(kasData);
 
@@ -3841,16 +4000,12 @@ const hasil = await response.json();
 
     } catch (error) {
       kasData = [];
-
       body.innerHTML = '<tr><td colspan="9" class="empty-state">❌ Data kas gagal dimuat.</td></tr>';
-
       if (summary) summary.textContent = "Gagal memuat data kas.";
-
       if (result) {
         result.className = "result error";
         result.textContent = "❌ " + (error.message || "Gagal mengambil data kas.");
       }
-
       console.error("loadKas Supabase:", error);
     }
   }
@@ -3858,96 +4013,35 @@ const hasil = await response.json();
   function renderKas(data) {
     const body = document.getElementById("kasTableBody");
     const summary = document.getElementById("kasSummary");
-
     if (!body) return;
-
     if (!Array.isArray(data) || !data.length) {
       body.innerHTML = '<tr><td colspan="9" class="empty-state">Belum ada transaksi kas.</td></tr>';
-
-      if (summary) {
-        summary.textContent = "0 transaksi";
-      }
-
+      if (summary) summary.textContent = "0 transaksi";
       return;
     }
-
     body.innerHTML = data.map(item => {
       const jenis = String(item.jenis || "").toUpperCase();
       const debit = Number(item.debit) || 0;
       const kredit = Number(item.kredit) || 0;
       const saldo = Number(item.saldo) || 0;
-
-      const badgeClass = jenis === "MASUK"
-        ? "badge-safe"
-        : "badge-danger";
-
-      return `
-        <tr>
-          <td>${escapeHtml(item.idKas || "-")}</td>
-          <td>${escapeHtml(formatKasDate(item.tanggal))}</td>
-          <td>
-            <span class="badge ${badgeClass}">
-              ${escapeHtml(jenis || "-")}
-            </span>
-          </td>
-          <td>${escapeHtml(item.kategori || "-")}</td>
-          <td>${escapeHtml(item.keterangan || "-")}</td>
-          <td>${debit > 0 ? formatRupiah(debit) : "-"}</td>
-          <td>${kredit > 0 ? formatRupiah(kredit) : "-"}</td>
-          <td>${formatRupiah(saldo)}</td>
-          <td>${escapeHtml(item.referensi || "-")}</td>
-        </tr>
-      `;
+      const badgeClass = jenis === "MASUK" ? "badge-safe" : "badge-danger";
+      return `<tr><td>${escapeHtml(item.idKas || "-")}</td><td>${escapeHtml(formatKasDate(item.tanggal))}</td><td><span class="badge ${badgeClass}">${escapeHtml(jenis || "-")}</span></td><td>${escapeHtml(item.kategori || "-")}</td><td>${escapeHtml(item.keterangan || "-")}</td><td>${debit > 0 ? formatRupiah(debit) : "-"}</td><td>${kredit > 0 ? formatRupiah(kredit) : "-"}</td><td>${formatRupiah(saldo)}</td><td>${escapeHtml(item.referensi || "-")}</td></tr>`;
     }).join("");
-
-    if (summary) {
-      summary.textContent = data.length + " transaksi";
-    }
+    if (summary) summary.textContent = data.length + " transaksi";
   }
 
   function filterKas() {
     const input = document.getElementById("kasSearch");
     const keyword = String(input ? input.value : "").trim().toLowerCase();
-
-    if (!keyword) {
-      renderKas(kasData);
-      return;
-    }
-
-    const hasil = kasData.filter(item => {
-      return [
-        item.idKas,
-        item.tanggal,
-        item.jenis,
-        item.kategori,
-        item.keterangan,
-        item.debit,
-        item.kredit,
-        item.saldo,
-        item.referensi
-      ]
-      .join(" ")
-      .toLowerCase()
-      .includes(keyword);
-    });
-
-    renderKas(hasil);
+    if (!keyword) return renderKas(kasData);
+    renderKas(kasData.filter(item => [item.idKas,item.tanggal,item.jenis,item.kategori,item.keterangan,item.debit,item.kredit,item.saldo,item.referensi].join(" ").toLowerCase().includes(keyword)));
   }
 
   function formatKasDate(value) {
     if (!value) return "-";
-
     const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return String(value);
-    }
-
-    return new Intl.DateTimeFormat("id-ID", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    }).format(date);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat("id-ID", {day:"2-digit",month:"2-digit",year:"numeric"}).format(date);
   }
 
   // ============================================================
