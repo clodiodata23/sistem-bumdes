@@ -2332,17 +2332,20 @@ const hasil = await response.json();
 
         // Perbarui semua data yang terlihat tanpa reload browser.
 
-        await loadDashboard();
+        // await loadDashboard();
 
 
 
         // Paksa ambil ulang data stok terbaru setelah transaksi tersimpan.
 
+        // salesProductsLoaded = false;
+
+        // salesProducts = [];
+
+        // await loadSalesProducts();
         salesProductsLoaded = false;
 
         salesProducts = [];
-
-        await loadSalesProducts();
 
 
 
