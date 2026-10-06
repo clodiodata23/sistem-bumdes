@@ -2979,11 +2979,10 @@ function ambilAngkaHarga(value) {
 
     try {
       // ID transaksi dibuat unik agar tidak bentrok dengan primary key Supabase.
-      const waktu = Date.now();
-      const acak = (typeof crypto !== "undefined" && crypto.randomUUID)
-        ? crypto.randomUUID().replace(/-/g, "").slice(0, 8)
-        : Math.random().toString(36).slice(2, 10);
-      idPengeluaran = "OU" + waktu + acak;
+      const unik = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID().replace(/-/g, "")
+        : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+      idPengeluaran = "OU" + unik;
       const tanggal = new Date().toISOString();
 
       // 1. Simpan pengeluaran ke Supabase.
