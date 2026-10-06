@@ -1910,63 +1910,31 @@ function ambilAngkaHarga(value) {
 
 
   async function cekKoneksi() {
-
     const status = document.getElementById("connectionStatus");
-
     const dashboardStatus = document.getElementById("dashboardStatus");
 
-
-
-    if (API_URL === "MASUKKAN_URL_WEB_APP_DI_SINI") {
-
-      status.textContent = "⚠️ URL API belum diisi";
-
-      status.className = "connection error";
-
-      dashboardStatus.textContent = "Masukkan URL Web App Apps Script terlebih dahulu.";
-
-      return;
-
-    }
-
-
-
     try {
+      const { error } = await supabaseClient
+        .from("master_barang")
+        .select("id_barang")
+        .limit(1);
 
-      const response = await fetch(API_URL);
+      if (error) throw error;
 
-      const data = await response.json();
-
-
-
-      if (data.status === "success") {
-
-        status.textContent = "● Terhubung";
-
-        status.className = "connection ok";
-
-        dashboardStatus.textContent = "✅ Terhubung ke Google Sheets.";
-
-      } else {
-
-        throw new Error("Respons API tidak sesuai.");
-
+      status.textContent = "● Terhubung";
+      status.className = "connection ok";
+      if (dashboardStatus) {
+        dashboardStatus.textContent = "✅ Terhubung ke Supabase.";
       }
 
-
-
     } catch (error) {
-
       status.textContent = "● Tidak terhubung";
-
       status.className = "connection error";
-
-      dashboardStatus.textContent = "❌ Koneksi gagal. Periksa URL Web App Apps Script.";
-
-      console.error(error);
-
+      if (dashboardStatus) {
+        dashboardStatus.textContent = "❌ Koneksi Supabase gagal.";
+      }
+      console.error("cekKoneksi Supabase:", error);
     }
-
   }
 
 
@@ -4061,21 +4029,110 @@ const hasil = await response.json();
 
   async function loadLaporan() {
     const result = document.getElementById("laporanResult");
-    if (result) { result.className = "result"; result.textContent = "Memuat laporan..."; }
+    if (result) {
+      result.className = "result";
+      result.textContent = "Memuat laporan dari Supabase...";
+    }
+
     try {
-      const response = await fetch(API_URL + "?action=getLaporan&ts=" + Date.now(), { cache: "no-store" });
-      const hasil = await response.json();
-      if (hasil.status !== "success") throw new Error(hasil.message || "Gagal mengambil laporan.");
-      laporanData = hasil.data || { penjualan: [], pembelian: [], pengeluaran: [] };
+      const [
+        { data: penjualanRows, error: penjualanError },
+        { data: pembelianRows, error: pembelianError },
+        { data: pengeluaranRows, error: pengeluaranError }
+      ] = await Promise.all([
+        supabaseClient
+          .from("penjualan")
+          .select("id_penjualan,tanggal,id_barang,nama_barang,qty,hpp,harga_jual,total_penjualan,total_hpp,laba_kotor,pembayaran,keterangan,link_nota")
+          .order("tanggal", { ascending: true }),
+
+        supabaseClient
+          .from("barang_masuk")
+          .select("id_pembelian,tanggal,id_barang,nama_barang,supplier,qty,harga_beli,total_pembelian,pembayaran,nomor_nota,link_nota,keterangan")
+          .order("tanggal", { ascending: true }),
+
+        supabaseClient
+          .from("pengeluaran")
+          .select("id_pengeluaran,tanggal,kategori,keterangan,jumlah,pembayaran,referensi,link_nota")
+          .order("tanggal", { ascending: true })
+      ]);
+
+      if (penjualanError) throw new Error("Penjualan: " + penjualanError.message);
+      if (pembelianError) throw new Error("Barang Masuk: " + pembelianError.message);
+      if (pengeluaranError) throw new Error("Pengeluaran: " + pengeluaranError.message);
+
+      laporanData = {
+        penjualan: (penjualanRows || []).map(x => ({
+          id: x.id_penjualan,
+          tanggal: x.tanggal,
+          idBarang: x.id_barang,
+          namaBarang: x.nama_barang,
+          qty: Number(x.qty) || 0,
+          hargaJual: Number(x.harga_jual) || 0,
+          total: Number(x.total_penjualan) || 0,
+          hpp: Number(x.total_hpp) || 0,
+          laba: Number(x.laba_kotor) || 0,
+          pembayaran: x.pembayaran || "Tunai",
+          keterangan: x.keterangan || "",
+          linkNota: x.link_nota || ""
+        })),
+
+        pembelian: (pembelianRows || []).map(x => ({
+          id: x.id_pembelian,
+          tanggal: x.tanggal,
+          idBarang: x.id_barang,
+          namaBarang: x.nama_barang,
+          supplier: x.supplier || "",
+          qty: Number(x.qty) || 0,
+          hargaBeli: Number(x.harga_beli) || 0,
+          total: Number(x.total_pembelian) || 0,
+          pembayaran: x.pembayaran || "Tunai",
+          nomorNota: x.nomor_nota || "",
+          linkNota: x.link_nota || "",
+          keterangan: x.keterangan || ""
+        })),
+
+        pengeluaran: (pengeluaranRows || []).map(x => ({
+          id: x.id_pengeluaran,
+          tanggal: x.tanggal,
+          kategori: x.kategori || "",
+          keterangan: x.keterangan || "",
+          jumlah: Number(x.jumlah) || 0,
+          pembayaran: x.pembayaran || "Tunai",
+          referensi: x.referensi || "",
+          linkNota: x.link_nota || ""
+        }))
+      };
+
       const today = tanggalHariIniISO();
-      if (!document.getElementById("laporanMulai").value) document.getElementById("laporanMulai").value = today.slice(0, 8) + "01";
-      if (!document.getElementById("laporanSelesai").value) document.getElementById("laporanSelesai").value = today;
+
+      if (!document.getElementById("laporanMulai").value) {
+        document.getElementById("laporanMulai").value = today.slice(0, 8) + "01";
+      }
+
+      if (!document.getElementById("laporanSelesai").value) {
+        document.getElementById("laporanSelesai").value = today;
+      }
+
       filterLaporan();
+
+      if (result) {
+        result.className = "result success";
+        result.textContent =
+          "✓ Laporan berhasil dimuat dari Supabase.";
+      }
+
     } catch (error) {
-      if (result) { result.className = "result error"; result.textContent = "❌ " + error.message; }
-      console.error("loadLaporan:", error);
+      if (result) {
+        result.className = "result error";
+        result.textContent =
+          "❌ Gagal memuat laporan: " +
+          (error.message || "Terjadi kesalahan.");
+      }
+
+      console.error("loadLaporan Supabase:", error);
     }
   }
+
 
   function filterLaporan() {
     const mulai = document.getElementById("laporanMulai").value;
