@@ -1749,7 +1749,7 @@ html, body {
 
             <h2 class="section-title" style="margin-bottom:5px;">Stok Barang</h2>
 
-            <div class="help">Data diambil langsung dari sheet STOK Google Sheets.</div>
+            <div class="help">Data stok diambil langsung dari Supabase.</div>
 
           </div>
 
@@ -1940,7 +1940,7 @@ html, body {
         <div class="table-toolbar">
           <div>
             <h2 class="section-title" style="margin-bottom:5px;">Kas</h2>
-            <div class="help">Data kas diambil langsung dari sheet KAS Google Sheets.</div>
+            <div class="help">Data kas diambil langsung dari Supabase.</div>
           </div>
           <button class="btn btn-secondary" type="button" onclick="loadKas()">↻ Perbarui Kas</button>
         </div>
@@ -2044,25 +2044,6 @@ html, body {
 
 
 <script>
-
-  /*
-
-    ============================================================
-
-    KONFIGURASI
-
-    ============================================================
-
-    GANTI URL DI BAWAH DENGAN URL "APLIKASI WEB" APPS SCRIPT.
-
-  */
-
-
-
-  // const API_URL = "https://script.google.com/macros/s/AKfycbwGa6qcZZI1No91DTILcQUJyVOm451QqV2wsRm7YILa76t-92x4WHPjavpT5tsPOGDN/exec";
-  // const API_URL = "https://tspfcbbjjurkbrihubgw.supabase.co/rest/v1/";
-
-  const API_URL = "https://script.google.com/macros/s/AKfycbwGa6qcZZI1No91DTILcQUJyVOm451QqV2wsRm7YILa76t-92x4WHPjavpT5tsPOGDN/exec";
 
 // ============================================================
 // SUPABASE
@@ -2470,183 +2451,120 @@ function ambilAngkaHarga(value) {
 
   // ============================================================
 
-  // SIMPAN PENJUALAN
-
+  // SIMPAN PENJUALAN — SUPABASE SAJA
   // ============================================================
-
-
 
   document.getElementById("salesForm").addEventListener("submit", async function(event) {
-
     event.preventDefault();
 
-
-
     const button = document.getElementById("salesButton");
-
     const result = document.getElementById("salesResult");
-
-
-
     const data = {
-
-      action: "simpanPenjualan",
-
       idBarang: document.getElementById("idBarang").value.trim(),
-
       qty: Number(document.getElementById("qty").value),
-
       pembayaran: document.getElementById("pembayaran").value,
-
       keterangan: document.getElementById("keterangan").value.trim(),
-
       linkNota: document.getElementById("linkNota").value.trim()
-
     };
 
-
-
     if (!data.idBarang || data.qty <= 0) {
-
       result.className = "result error";
-
-      result.textContent = "Pilih barang dan isi jumlah penjualan terlebih dahulu.";
-
+      result.textContent = "❌ Pilih barang dan isi jumlah penjualan terlebih dahulu.";
       return;
-
     }
-
-
 
     const selectedProduct = salesProducts.find(x => String(x.idBarang) === String(data.idBarang));
-
-    if (selectedProduct) {
-
-      const stokTersedia = Number(selectedProduct.stokAkhir) || 0;
-
-      if (data.qty > stokTersedia) {
-
-        result.className = "result error";
-
-        result.textContent = `❌ Stok ${selectedProduct.namaBarang} tidak mencukupi. Stok tersedia: ${formatNumber(stokTersedia)}.`;
-
-        return;
-
-      }
-
+    if (!selectedProduct) {
+      result.className = "result error";
+      result.textContent = "❌ Data barang belum termuat. Pilih kembali barang dari daftar.";
+      return;
     }
 
+    const stokLama = Number(selectedProduct.stokAkhir) || 0;
+    if (data.qty > stokLama) {
+      result.className = "result error";
+      result.textContent = `❌ Stok ${selectedProduct.namaBarang} tidak mencukupi. Stok tersedia: ${formatNumber(stokLama)}.`;
+      return;
+    }
 
+    const hpp = Number(selectedProduct.hpp) || 0;
+    const hargaJual = Number(selectedProduct.hargaJual) || 0;
+    const totalPenjualan = data.qty * hargaJual;
+    const totalHpp = data.qty * hpp;
+    const labaKotor = totalPenjualan - totalHpp;
+    const stokBaru = stokLama - data.qty;
+    const terjualBaru = (Number(selectedProduct.terjual) || 0) + data.qty;
+    const stokMinimum = Number(selectedProduct.stokMinimum) || 0;
+    const statusBaru = stokBaru <= 0 ? "HABIS" : (stokBaru <= stokMinimum ? "MENIPIS" : "AMAN");
+    const idPenjualan = "PJL" + Date.now();
+    const tanggal = new Date().toISOString();
 
     button.disabled = true;
-
     button.textContent = "Menyimpan...";
-
-
-
     result.className = "result";
-
     result.textContent = "";
 
-
+    let salesInserted = false;
+    let stockUpdated = false;
+    let kasInserted = false;
+    let kasId = "";
 
     try {
+      const { error: salesError } = await supabaseClient.from("penjualan").insert({
+        id_penjualan: idPenjualan, tanggal: tanggal, id_barang: data.idBarang,
+        nama_barang: selectedProduct.namaBarang, qty: data.qty, hpp: hpp,
+        harga_jual: hargaJual, total_penjualan: totalPenjualan, total_hpp: totalHpp,
+        laba_kotor: labaKotor, pembayaran: data.pembayaran || "Tunai",
+        keterangan: data.keterangan || null, link_nota: data.linkNota || null
+      });
+      if (salesError) throw salesError;
+      salesInserted = true;
 
-      const params = new URLSearchParams({
+      const { error: stockError } = await supabaseClient.from("stok").update({
+        terjual: terjualBaru, stok_akhir: stokBaru, status: statusBaru
+      }).eq("id_barang", data.idBarang);
+      if (stockError) throw stockError;
+      stockUpdated = true;
 
-  action: "simpanPenjualan",
-
-  idBarang: data.idBarang,
-
-  qty: data.qty,
-
-  pembayaran: data.pembayaran,
-
-  keterangan: data.keterangan,
-
-  linkNota: data.linkNota
-
-});
-
-
-
-const response = await fetch(API_URL + "?" + params.toString());
-
-
-
-const hasil = await response.json();
-
-
-
-      if (hasil.status === "success") {
-
-        result.className = "result success";
-
-        result.innerHTML =
-
-          "✅ Penjualan berhasil disimpan.<br>" +
-
-          "ID: <strong>" + hasil.idPenjualan + "</strong><br>" +
-
-          "Total: <strong>" + formatRupiah(hasil.total) + "</strong><br>" +
-
-          "Laba kotor: <strong>" + formatRupiah(hasil.labaKotor) + "</strong>";
-
-
-
-        document.getElementById("salesForm").reset();
-
-        document.getElementById("salesProductInfo").className = "sales-product-info";
-
-        document.getElementById("salesProductInfo").textContent = "Pilih barang dari daftar.";
-
-        salesProductsLoaded = false;
-
-        salesProducts = [];
-
-
-
-        // Simpan lebih cepat: tidak melakukan request tambahan.
-        salesProductsLoaded = false;
-        salesProducts = [];
-
-
-
-      } else {
-
-        throw new Error(hasil.message || "Gagal menyimpan transaksi.");
-
+      if (String(data.pembayaran || "").toLowerCase() === "tunai") {
+        kasId = "KAS-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10).toUpperCase();
+        const { error: kasError } = await supabaseClient.from("kas").insert({
+          id_kas: kasId, tanggal: tanggal, jenis: "MASUK", kategori: "PENJUALAN",
+          keterangan: "Penjualan " + selectedProduct.namaBarang, debit: totalPenjualan,
+          kredit: 0, referensi: idPenjualan
+        });
+        if (kasError) throw kasError;
+        kasInserted = true;
       }
 
+      result.className = "result success";
+      result.innerHTML = "✅ Penjualan berhasil disimpan.<br>" +
+        "ID: <strong>" + escapeHtml(idPenjualan) + "</strong><br>" +
+        "Barang: <strong>" + escapeHtml(selectedProduct.namaBarang) + "</strong><br>" +
+        "Jumlah terjual: <strong>" + formatNumber(data.qty) + "</strong><br>" +
+        "Total: <strong>" + formatRupiah(totalPenjualan) + "</strong><br>" +
+        "HPP: <strong>" + formatRupiah(totalHpp) + "</strong><br>" +
+        "Laba kotor: <strong>" + formatRupiah(labaKotor) + "</strong><br>" +
+        "Stok sekarang: <strong>" + formatNumber(stokBaru) + "</strong>" +
+        (kasInserted ? "<br>Kas: <strong>Kas Masuk otomatis dicatat</strong>" : "");
 
-
+      document.getElementById("salesForm").reset();
+      clearSalesProductSelection();
+      salesProductsLoaded = false;
+      salesProducts = [];
     } catch (error) {
-
+      if (kasInserted && kasId) await supabaseClient.from("kas").delete().eq("id_kas", kasId);
+      if (stockUpdated) await supabaseClient.from("stok").update({ terjual: Number(selectedProduct.terjual) || 0, stok_akhir: stokLama, status: selectedProduct.status || "AMAN" }).eq("id_barang", data.idBarang);
+      if (salesInserted) await supabaseClient.from("penjualan").delete().eq("id_penjualan", idPenjualan);
       result.className = "result error";
-
-      result.textContent = "❌ " + error.message;
-
-      console.error(error);
-
+      result.textContent = "❌ " + (error.message || "Gagal menyimpan penjualan.");
+      console.error("SUPABASE PENJUALAN ERROR:", error);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Simpan Penjualan";
     }
-
-
-
-    button.disabled = false;
-
-    button.textContent = "Simpan Penjualan";
-
   });
 
-
-
-
-
-
-
-
-
-  // ============================================================
 
   // DATA BARANG UNTUK BARANG MASUK
 
@@ -2857,305 +2775,277 @@ const hasil = await response.json();
 
     event.preventDefault();
 
-
-
     const button = document.getElementById("purchaseButton");
-
     const result = document.getElementById("purchaseResult");
 
-
-
-    const qtyInput = document.getElementById("purchaseQty").value.trim();
-
-    const hargaBeliInput = document.getElementById("purchaseHargaBeli").value.trim();
-
-
-
     const data = {
-
-      action: "simpanBarangMasuk",
-
       idBarang: document.getElementById("purchaseIdBarang").value.trim(),
-
-      qty: Number(qtyInput),
-
-      jumlah: Number(qtyInput),
-
+      qty: Number(document.getElementById("purchaseQty").value),
       supplier: document.getElementById("purchaseSupplier").value.trim(),
-
-      hargaBeli: ambilAngkaHarga(hargaBeliInput),
-
+      hargaBeli: ambilAngkaHarga(document.getElementById("purchaseHargaBeli").value),
       pembayaran: document.getElementById("purchasePembayaran").value,
-
       nomorNota: document.getElementById("purchaseNota").value.trim(),
-
       linkNota: document.getElementById("purchaseLinkNota").value.trim(),
-
       keterangan: document.getElementById("purchaseKeterangan").value.trim()
-
     };
 
-
-
-    if (!data.idBarang || data.qty <= 0 || data.hargaBeli < 0 || !data.supplier) {
-
+    if (!data.idBarang || data.qty <= 0 || data.hargaBeli <= 0 || !data.supplier) {
       result.className = "result error";
-
       result.textContent = "❌ Barang, jumlah, supplier, dan harga beli wajib diisi. Pilih barang dari daftar.";
-
       return;
-
     }
 
-
-
     button.disabled = true;
-
     button.textContent = "Menyimpan...";
 
     result.className = "result";
-
     result.textContent = "";
 
-
-
     try {
+      const [
+        { data: master, error: masterError },
+        { data: stok, error: stokError }
+      ] = await Promise.all([
+        supabaseClient
+          .from("master_barang")
+          .select("id_barang,nama_barang,harga_beli_terakhir,hpp_rata_rata,harga_jual,aktif")
+          .eq("id_barang", data.idBarang)
+          .maybeSingle(),
 
-      // Kirim parameter secara eksplisit agar tidak ada field yang hilang.
+        supabaseClient
+          .from("stok")
+          .select("id_barang,nama_barang,stok_awal,barang_masuk,terjual,stok_akhir,stok_minimum,status")
+          .eq("id_barang", data.idBarang)
+          .maybeSingle()
+      ]);
 
-      const params = new URLSearchParams();
+      if (masterError) throw masterError;
+      if (stokError) throw stokError;
+      if (!master) throw new Error("Data master barang tidak ditemukan.");
+      if (master.aktif === false) throw new Error("Barang ini sudah nonaktif.");
+      if (!stok) throw new Error("Data stok barang tidak ditemukan.");
 
-      params.set("action", data.action);
+      const stokLama = Number(stok.stok_akhir) || 0;
+      const barangMasukLama = Number(stok.barang_masuk) || 0;
+      const stokMinimum = Number(stok.stok_minimum) || 0;
 
-      params.set("idBarang", data.idBarang);
+      const hppLama =
+        Number(master.hpp_rata_rata) ||
+        Number(master.harga_beli_terakhir) ||
+        0;
 
-      params.set("qty", String(data.qty));
+      const hppBaru = hppLama > 0 && stokLama > 0
+        ? Math.round(((stokLama * hppLama) + (data.qty * data.hargaBeli)) / (stokLama + data.qty))
+        : data.hargaBeli;
 
-      params.set("jumlah", String(data.jumlah));
+      const stokBaru = stokLama + data.qty;
+      const barangMasukBaru = barangMasukLama + data.qty;
 
-      params.set("supplier", data.supplier);
-
-      params.set("hargaBeli", String(data.hargaBeli));
-
-      params.set("pembayaran", data.pembayaran);
-
-      params.set("nomorNota", data.nomorNota);
-
-      params.set("linkNota", data.linkNota);
-
-      params.set("keterangan", data.keterangan);
-
-
-
-      const response = await fetch(API_URL + "?" + params.toString(), {
-
-        method: "GET",
-
-        cache: "no-store"
-
-      });
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal menyimpan barang masuk.");
-
+      let statusBaru = "AMAN";
+      if (stokBaru <= 0) {
+        statusBaru = "HABIS";
+      } else if (stokBaru <= stokMinimum) {
+        statusBaru = "MENIPIS";
       }
 
+      const totalPembelian = data.qty * data.hargaBeli;
+      const idPembelian = "BM" + Date.now();
 
+      const { error: pembelianError } = await supabaseClient
+        .from("barang_masuk")
+        .insert({
+          id_pembelian: idPembelian,
+          tanggal: new Date().toISOString(),
+          id_barang: data.idBarang,
+          nama_barang: master.nama_barang,
+          supplier: data.supplier,
+          qty: data.qty,
+          harga_beli: data.hargaBeli,
+          total_pembelian: totalPembelian,
+          pembayaran: data.pembayaran || "Tunai",
+          nomor_nota: data.nomorNota || null,
+          link_nota: data.linkNota || null,
+          keterangan: data.keterangan || null
+        });
+
+      if (pembelianError) throw pembelianError;
+
+      const { error: stokUpdateError } = await supabaseClient
+        .from("stok")
+        .update({
+          barang_masuk: barangMasukBaru,
+          stok_akhir: stokBaru,
+          status: statusBaru
+        })
+        .eq("id_barang", data.idBarang);
+
+      if (stokUpdateError) throw stokUpdateError;
+
+      const { error: masterUpdateError } = await supabaseClient
+        .from("master_barang")
+        .update({
+          harga_beli_terakhir: data.hargaBeli,
+          hpp_rata_rata: hppBaru
+        })
+        .eq("id_barang", data.idBarang);
+
+      if (masterUpdateError) throw masterUpdateError;
+
+      if (String(data.pembayaran || "").toLowerCase() === "tunai") {
+
+        // ID kas harus benar-benar unik.
+        // Sebelumnya memakai KAS-{idPembelian}, sehingga saat transaksi
+        // dicoba ulang dapat berbenturan dengan primary key kas.
+        const idKas = "KAS-" + Date.now() + "-" +
+          Math.random().toString(36).slice(2, 10).toUpperCase();
+
+        const { error: kasError } = await supabaseClient
+          .from("kas")
+          .insert({
+            id_kas: idKas,
+            tanggal: new Date().toISOString(),
+            jenis: "KELUAR",
+            kategori: "PEMBELIAN",
+            keterangan: "Pembelian " + master.nama_barang,
+            debit: 0,
+            kredit: totalPembelian,
+            referensi: idPembelian
+          });
+
+        if (kasError) throw kasError;
+      }
 
       result.className = "result success";
-
       result.innerHTML =
-
         "✅ Barang masuk berhasil disimpan.<br>" +
-
-        "ID: <strong>" + hasil.idPembelian + "</strong><br>" +
-
-        "Barang: <strong>" + escapeHtml(hasil.namaBarang) + "</strong><br>" +
-
-        "Total pembelian: <strong>" + formatRupiah(hasil.totalPembelian) + "</strong>";
-
-
+        "ID: <strong>" + escapeHtml(idPembelian) + "</strong><br>" +
+        "Barang: <strong>" + escapeHtml(master.nama_barang) + "</strong><br>" +
+        "Jumlah masuk: <strong>" + formatNumber(data.qty) + "</strong><br>" +
+        "Stok sekarang: <strong>" + formatNumber(stokBaru) + "</strong><br>" +
+        "HPP rata-rata: <strong>" + formatRupiah(hppBaru) + "</strong><br>" +
+        "Total pembelian: <strong>" + formatRupiah(totalPembelian) + "</strong>";
 
       document.getElementById("purchaseForm").reset();
-
       clearPurchaseProductSelection();
-
-
-
-      // Simpan lebih cepat: tidak melakukan request tambahan.
-      // Cache daftar barang dibersihkan agar data baru diambil saat dibutuhkan.
       purchaseProductsLoaded = false;
       purchaseProducts = [];
 
-
-
     } catch (error) {
-
       result.className = "result error";
-
-      result.textContent = "❌ " + error.message;
-
-      console.error(error);
-
+      result.textContent = "❌ " + (error.message || "Gagal menyimpan barang masuk.");
+      console.error("SUPABASE BARANG MASUK ERROR:", error);
     }
 
-
-
     button.disabled = false;
-
     button.textContent = "Simpan Barang Masuk";
 
   });
 
 
-
-
-
   // ============================================================
 
-  // SIMPAN PENGELUARAN
+  // SIMPAN PENGELUARAN — SUPABASE + KAS
 
   // ============================================================
-
-
 
   document.getElementById("expenseForm").addEventListener("submit", async function(event) {
 
     event.preventDefault();
 
-
-
     const button = document.getElementById("expenseButton");
-
     const result = document.getElementById("expenseResult");
 
-
-
     const data = {
-
-      action: "simpanPengeluaran",
-
       kategori: document.getElementById("expenseKategori").value,
-
       keterangan: document.getElementById("expenseKeterangan").value.trim(),
-
       jumlah: ambilAngkaHarga(document.getElementById("expenseJumlah").value),
-
       pembayaran: document.getElementById("expensePembayaran").value,
-
       referensi: document.getElementById("expenseReferensi").value.trim(),
-
       linkNota: document.getElementById("expenseLinkNota").value.trim()
-
     };
 
-
-
     if (!data.kategori || !data.keterangan || data.jumlah <= 0) {
-
       result.className = "result error";
-
       result.textContent = "❌ Kategori, keterangan, dan jumlah wajib diisi.";
-
       return;
-
     }
 
-
-
     button.disabled = true;
-
     button.textContent = "Menyimpan...";
-
     result.className = "result";
-
     result.textContent = "";
 
-
+    let idPengeluaran = "";
 
     try {
+      // ID pengeluaran dibuat langsung di browser sebelum disimpan ke Supabase.
+      idPengeluaran = "OU" + Date.now();
+      const tanggal = new Date().toISOString();
 
-      const params = new URLSearchParams();
+      // 1. Simpan pengeluaran ke Supabase.
+      const { error: expenseError } = await supabaseClient
+        .from("pengeluaran")
+        .insert({
+          id_pengeluaran: idPengeluaran,
+          tanggal: tanggal,
+          kategori: data.kategori,
+          keterangan: data.keterangan,
+          jumlah: data.jumlah,
+          pembayaran: data.pembayaran || "Tunai",
+          referensi: data.referensi || null,
+          link_nota: data.linkNota || null
+        });
 
-      params.set("action", data.action);
+      if (expenseError) throw expenseError;
 
-      params.set("kategori", data.kategori);
+      // 2. Jika pembayaran Tunai, otomatis catat Kas Keluar.
+      if (String(data.pembayaran || "").toLowerCase() === "tunai") {
+        const idKas = "KAS-" + idPengeluaran;
 
-      params.set("keterangan", data.keterangan);
+        const { error: kasError } = await supabaseClient
+          .from("kas")
+          .insert({
+            id_kas: idKas,
+            tanggal: tanggal,
+            jenis: "KELUAR",
+            kategori: "PENGELUARAN",
+            keterangan: data.keterangan,
+            debit: 0,
+            kredit: data.jumlah,
+            referensi: idPengeluaran
+          });
 
-      params.set("jumlah", String(data.jumlah));
-
-      params.set("pembayaran", data.pembayaran);
-
-      params.set("referensi", data.referensi);
-
-      params.set("linkNota", data.linkNota);
-
-
-
-      const response = await fetch(API_URL + "?" + params.toString(), {
-
-        method: "GET",
-
-        cache: "no-store"
-
-      });
-
-
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal menyimpan pengeluaran.");
-
+        if (kasError) {
+          // Jangan meninggalkan pengeluaran tanpa pasangan kas jika kas gagal.
+          await supabaseClient
+            .from("pengeluaran")
+            .delete()
+            .eq("id_pengeluaran", idPengeluaran);
+          throw kasError;
+        }
       }
 
-
-
       result.className = "result success";
-
       result.innerHTML =
-
         "✅ Pengeluaran berhasil disimpan.<br>" +
-
-        "ID: <strong>" + escapeHtml(hasil.idPengeluaran) + "</strong><br>" +
-
-        "Jumlah: <strong>" + formatRupiah(hasil.jumlah) + "</strong>";
-
-
+        "ID: <strong>" + escapeHtml(idPengeluaran) + "</strong><br>" +
+        "Jumlah: <strong>" + formatRupiah(data.jumlah) + "</strong>" +
+        (String(data.pembayaran || "").toLowerCase() === "tunai"
+          ? "<br>Kas: <strong>Kas Keluar otomatis dicatat</strong>"
+          : "");
 
       document.getElementById("expenseForm").reset();
 
-
-
-      // Dashboard akan diperbarui saat halaman Dashboard dibuka atau di-refresh.
-
-
+      // Dashboard/Kas akan membaca data terbaru saat dibuka atau diperbarui.
 
     } catch (error) {
-
       result.className = "result error";
-
-      result.textContent = "❌ " + error.message;
-
-      console.error(error);
-
+      result.textContent = "❌ " + (error.message || "Gagal menyimpan pengeluaran.");
+      console.error("SUPABASE PENGELUARAN ERROR:", error);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Simpan Pengeluaran";
     }
-
-
-
-    button.disabled = false;
-
-    button.textContent = "Simpan Pengeluaran";
-
   });
 
 
@@ -3830,70 +3720,6 @@ const hasil = await response.json();
   let stokData = [];
 
 
-
-  async function loadStok() {
-
-    const tbody = document.getElementById("stockTableBody");
-
-    const summary = document.getElementById("stockSummary");
-
-    const result = document.getElementById("stockResult");
-
-
-
-    if (!tbody) return;
-
-
-
-    tbody.innerHTML =
-
-      '<tr><td colspan="8" class="empty-state">⏳ Memuat data stok...</td></tr>';
-
-    summary.textContent = "Memuat data stok...";
-
-    result.className = "result";
-
-    result.textContent = "";
-
-
-
-    try {
-
-      const response = await fetch(API_URL + "?action=getStok");
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal mengambil data stok.");
-
-      }
-
-
-
-      stokData = Array.isArray(hasil.data) ? hasil.data : [];
-
-      renderStok(stokData);
-
-    } catch (error) {
-
-      tbody.innerHTML =
-
-        '<tr><td colspan="8" class="empty-state">❌ Gagal mengambil data stok.</td></tr>';
-
-      summary.textContent = "Data stok gagal dimuat.";
-
-      result.className = "result error";
-
-      result.textContent = "❌ " + error.message;
-
-      console.error(error);
-
-    }
-
-  }
 
   async function loadStok() {
   const tbody = document.getElementById("stockTableBody");
