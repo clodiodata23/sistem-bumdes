@@ -1297,138 +1297,90 @@
 
       <div class="panel">
 
-        <h2 class="section-title">Input Pengeluaran</h2>
-
-
+        <div class="table-toolbar">
+          <div>
+            <h2 class="section-title" style="margin-bottom:5px;">Input Pengeluaran</h2>
+            <div class="help">
+              Pengeluaran operasional disimpan langsung ke Supabase.
+              Jika pembayaran Tunai, Kas Keluar dibuat otomatis.
+            </div>
+          </div>
+        </div>
 
         <form id="expenseForm">
 
           <div class="form-grid">
 
             <div>
-
               <label for="expenseKategori">Kategori</label>
-
               <select id="expenseKategori" required>
-
                 <option value="">Pilih kategori</option>
-
                 <option value="ATK">ATK</option>
-
                 <option value="Transportasi">Transportasi</option>
-
                 <option value="Honor">Honor</option>
-
                 <option value="Listrik">Listrik</option>
-
                 <option value="Administrasi">Administrasi</option>
-
                 <option value="Pemeliharaan">Pemeliharaan</option>
-
                 <option value="Operasional">Operasional</option>
-
                 <option value="Lainnya">Lainnya</option>
-
               </select>
-
             </div>
 
-
-
             <div>
-
               <label for="expenseJumlah">Jumlah</label>
-
-              <input id="expenseJumlah" type="number" min="1" step="1"
-
-                     placeholder="Contoh: 50000" required>
-
-            </div>
-
-
-
-            <div>
-
-              <label for="expensePembayaran">Metode Pembayaran</label>
-
-              <select id="expensePembayaran">
-
-                <option value="Tunai">Tunai</option>
-
-                <option value="Transfer">Transfer</option>
-
-              </select>
-
-            </div>
-
-
-
-            <div>
-
-              <label for="expenseReferensi">Referensi</label>
-
-              <input id="expenseReferensi" placeholder="Opsional">
-
-            </div>
-
-
-
-            <div>
-
-              <label for="expenseLinkNota">Link Nota</label>
-
-              <input id="expenseLinkNota" placeholder="Opsional">
-
-            </div>
-
-
-
-            <div>
-
-              <label for="expenseKeterangan">Keterangan</label>
-
-              <input id="expenseKeterangan"
-
-                     placeholder="Contoh: Beli buku nota"
-
+              <input id="expenseJumlah"
+                     type="text"
+                     inputmode="numeric"
+                     placeholder="Contoh: Rp50.000"
+                     oninput="formatHargaInput(this)"
                      required>
+            </div>
 
+            <div>
+              <label for="expensePembayaran">Metode Pembayaran</label>
+              <select id="expensePembayaran">
+                <option value="Tunai">Tunai</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="expenseReferensi">Referensi</label>
+              <input id="expenseReferensi" placeholder="Opsional">
+            </div>
+
+            <div>
+              <label for="expenseLinkNota">Link Nota</label>
+              <input id="expenseLinkNota" placeholder="Opsional">
+            </div>
+
+            <div>
+              <label for="expenseKeterangan">Keterangan</label>
+              <input id="expenseKeterangan"
+                     placeholder="Contoh: Beli buku nota"
+                     required>
             </div>
 
           </div>
 
-
-
           <div>
-
             <button class="btn btn-primary" type="submit" id="expenseButton">
-
               Simpan Pengeluaran
-
             </button>
-
           </div>
 
         </form>
 
-
-
         <div id="expenseResult" class="result"></div>
 
-
-
-        <p class="help">
-
-          Pengeluaran akan masuk ke sheet PENGELUARAN. Jika pembayaran Tunai,
-
-          transaksi juga otomatis dicatat sebagai Kas Keluar.
-
-        </p>
+        <div class="help" style="margin-top:12px;">
+          Contoh: ATK Rp20.000 dibayar Tunai → Pengeluaran tercatat Rp20.000
+          dan Kas Keluar otomatis bertambah Rp20.000. Pengeluaran tidak mengubah stok.
+        </div>
 
       </div>
 
     </section>
-
 
 
     <!-- STOK -->
@@ -2771,228 +2723,89 @@ const hasil = await response.json();
 
   // ============================================================
 
-  // SIMPAN PENGELUARAN
-
+  // SIMPAN PENGELUARAN — SUPABASE
   // ============================================================
 
-
-
   document.getElementById("expenseForm").addEventListener("submit", async function(event) {
-
     event.preventDefault();
 
-
-
     const button = document.getElementById("expenseButton");
-
     const result = document.getElementById("expenseResult");
 
+    const kategori = document.getElementById("expenseKategori").value;
+    const keterangan = document.getElementById("expenseKeterangan").value.trim();
+    const jumlah = ambilAngkaHarga(document.getElementById("expenseJumlah").value);
+    const pembayaran = document.getElementById("expensePembayaran").value;
+    const referensi = document.getElementById("expenseReferensi").value.trim();
+    const linkNota = document.getElementById("expenseLinkNota").value.trim();
 
-
-    const data = {
-
-      action: "simpanPengeluaran",
-
-      kategori: document.getElementById("expenseKategori").value,
-
-      keterangan: document.getElementById("expenseKeterangan").value.trim(),
-
-      jumlah: ambilAngkaHarga(document.getElementById("expenseJumlah").value),
-
-      pembayaran: document.getElementById("expensePembayaran").value,
-
-      referensi: document.getElementById("expenseReferensi").value.trim(),
-
-      linkNota: document.getElementById("expenseLinkNota").value.trim()
-
-    };
-
-
-
-    if (!data.kategori || !data.keterangan || data.jumlah <= 0) {
-
+    if (!kategori || !keterangan || jumlah <= 0) {
       result.className = "result error";
-
       result.textContent = "❌ Kategori, keterangan, dan jumlah wajib diisi.";
-
       return;
-
     }
 
-
-
     button.disabled = true;
-
     button.textContent = "Menyimpan...";
-
     result.className = "result";
-
     result.textContent = "";
 
-
-
     try {
+      const idPengeluaran =
+        "OUT" +
+        new Date().toISOString().replace(/\D/g, "").slice(0, 14) +
+        Math.floor(Math.random() * 1000).toString().padStart(3, "0");
 
-      const params = new URLSearchParams();
+      const { data, error } = await supabaseClient
+        .from("pengeluaran")
+        .insert([{
+          id_pengeluaran: idPengeluaran,
+          tanggal: new Date().toISOString(),
+          kategori: kategori,
+          keterangan: keterangan,
+          jumlah: jumlah,
+          pembayaran: pembayaran,
+          referensi: referensi || null,
+          link_nota: linkNota || null
+        }])
+        .select()
+        .single();
 
-      params.set("action", data.action);
-
-      params.set("kategori", data.kategori);
-
-      params.set("keterangan", data.keterangan);
-
-      params.set("jumlah", String(data.jumlah));
-
-      params.set("pembayaran", data.pembayaran);
-
-      params.set("referensi", data.referensi);
-
-      params.set("linkNota", data.linkNota);
-
-
-
-      const response = await fetch(API_URL + "?" + params.toString(), {
-
-        method: "GET",
-
-        cache: "no-store"
-
-      });
-
-
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal menyimpan pengeluaran.");
-
+      if (error) {
+        throw error;
       }
-
-
 
       result.className = "result success";
 
-      result.innerHTML =
-
+      let pesan =
         "✅ Pengeluaran berhasil disimpan.<br>" +
+        "ID: <strong>" + escapeHtml(data.id_pengeluaran) + "</strong><br>" +
+        "Kategori: <strong>" + escapeHtml(data.kategori) + "</strong><br>" +
+        "Jumlah: <strong>" + formatRupiah(Number(data.jumlah) || 0) + "</strong><br>" +
+        "Pembayaran: <strong>" + escapeHtml(data.pembayaran) + "</strong>";
 
-        "ID: <strong>" + escapeHtml(hasil.idPengeluaran) + "</strong><br>" +
+      if (String(data.pembayaran).toLowerCase() === "tunai") {
+        pesan += "<br>💰 <strong>Kas Keluar otomatis tercatat.</strong>";
+      } else {
+        pesan += "<br>ℹ️ Pembayaran non-tunai tidak menambah Kas Keluar tunai.";
+      }
 
-        "Jumlah: <strong>" + formatRupiah(hasil.jumlah) + "</strong>";
-
-
+      result.innerHTML = pesan;
 
       document.getElementById("expenseForm").reset();
 
-
-
-      // Dashboard akan diperbarui saat halaman Dashboard dibuka atau di-refresh.
-
-
-
     } catch (error) {
-
       result.className = "result error";
+      result.textContent =
+        "❌ Gagal menyimpan pengeluaran: " +
+        (error.message || "Terjadi kesalahan.");
 
-      result.textContent = "❌ " + error.message;
-
-      console.error(error);
-
+      console.error("simpanPengeluaran Supabase:", error);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Simpan Pengeluaran";
     }
-
-
-
-    button.disabled = false;
-
-    button.textContent = "Simpan Pengeluaran";
-
   });
-
-
-
-  // ============================================================
-
-  // DATA DASHBOARD
-
-  // ============================================================
-
-
-
-  async function loadDashboard() {
-
-    try {
-
-      const response = await fetch(API_URL + "?action=getDashboard&ts=" + Date.now(), {
-
-        method: "GET",
-
-        cache: "no-store"
-
-      });
-
-      const hasil = await response.json();
-
-
-
-      if (hasil.status !== "success") {
-
-        throw new Error(hasil.message || "Gagal mengambil data dashboard.");
-
-      }
-
-
-
-      const d = hasil.data || {};
-
-
-
-      document.getElementById("dashSaldoKas").textContent = formatRupiah(d.saldoKas);
-
-      document.getElementById("dashPenjualan").textContent = formatRupiah(d.totalPenjualan);
-
-      document.getElementById("dashLabaKotor").textContent = formatRupiah(d.labaKotor);
-
-      document.getElementById("dashPengeluaran").textContent = formatRupiah(d.pengeluaranOperasional);
-
-      document.getElementById("dashPembelian").textContent = formatRupiah(d.totalPembelian);
-
-      document.getElementById("dashLabaBersih").textContent = formatRupiah(d.labaBersih);
-
-      document.getElementById("dashStokMenipis").textContent = formatNumber(d.stokMenipis);
-
-      document.getElementById("dashStokHabis").textContent = formatNumber(d.stokHabis);
-
-
-
-      document.getElementById("dashboardInventorySummary").innerHTML =
-
-        "📦 <strong>" + formatNumber(d.totalJenisBarang) + "</strong> jenis barang • " +
-
-        "<strong>" + formatNumber(d.stokAman) + "</strong> aman • " +
-
-        "<strong>" + formatNumber(d.stokMenipis) + "</strong> menipis • " +
-
-        "<strong>" + formatNumber(d.stokHabis) + "</strong> habis";
-
-
-
-      document.getElementById("dashboardStatus").textContent =
-
-        "✅ Data dashboard berhasil diperbarui dari Google Sheets.";
-
-    } catch (error) {
-
-      document.getElementById("dashboardStatus").textContent = "❌ " + error.message;
-
-      console.error(error);
-
-    }
-
-  }
-
 
 
   // ============================================================
