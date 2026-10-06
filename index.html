@@ -1770,6 +1770,22 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_PUBLISHABLE_KEY
 );
 
+// TES KONEKSI SUPABASE
+async function testSupabaseConnection() {
+  const { data, error } = await supabaseClient
+    .from("master_barang")
+    .select("id_barang")
+    .limit(1);
+
+  if (error) {
+    console.error("❌ SUPABASE ERROR:", error);
+  } else {
+    console.log("✅ SUPABASE TERHUBUNG:", data);
+  }
+}
+
+testSupabaseConnection();
+
 
 
 
@@ -3059,40 +3075,79 @@ const hasil = await response.json();
   let masterBarangData = [];
   let masterBarangEditMode = false;
 
-  async function loadMasterBarang() {
-    const tbody = document.getElementById("masterBarangTableBody");
-    const summary = document.getElementById("masterBarangSummary");
-    const result = document.getElementById("masterBarangResult");
-    if (!tbody) return;
+ async function loadMasterBarang() {
+  const tbody = document.getElementById("masterBarangTableBody");
+  const summary = document.getElementById("masterBarangSummary");
+  const result = document.getElementById("masterBarangResult");
 
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">⏳ Memuat master barang...</td></tr>';
-    if (summary) summary.textContent = "Memuat data...";
-    if (result) { result.className = "result"; result.textContent = ""; }
+  if (!tbody) return;
 
-    try {
-      const response = await fetch(API_URL + "?action=getMasterBarang&ts=" + Date.now(), {
-        cache: "no-store"
-      });
-      const hasil = await response.json();
+  tbody.innerHTML =
+    '<tr><td colspan="11" class="empty-state">⏳ Memuat master barang...</td></tr>';
 
-      if (hasil.status !== "success") {
-        throw new Error(hasil.message || "Gagal mengambil master barang.");
-      }
-
-      masterBarangData = Array.isArray(hasil.data) ? hasil.data : [];
-      renderMasterBarang(masterBarangData);
-    } catch (error) {
-      masterBarangData = [];
-      tbody.innerHTML = '<tr><td colspan="11" class="empty-state">❌ Master barang gagal dimuat.</td></tr>';
-      if (summary) summary.textContent = "Data gagal dimuat.";
-      if (result) {
-        result.className = "result error";
-        result.textContent = "❌ " + error.message;
-      }
-      console.error(error);
-    }
+  if (summary) summary.textContent = "Memuat data...";
+  if (result) {
+    result.className = "result";
+    result.textContent = "";
   }
 
+  try {
+    const { data, error } = await supabaseClient
+      .from("master_barang")
+      .select(`
+        id_barang,
+        nama_barang,
+        kategori,
+        satuan,
+        harga_beli_terakhir,
+        hpp_rata_rata,
+        harga_jual,
+        stok_minimum,
+        status,
+        aktif
+      `)
+      .order("id_barang", { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    masterBarangData = (data || []).map(item => ({
+      idBarang: item.id_barang,
+      namaBarang: item.nama_barang,
+      kategori: item.kategori,
+      satuan: item.satuan,
+      hargaBeliTerakhir: Number(item.harga_beli_terakhir) || 0,
+      hppRataRata: Number(item.hpp_rata_rata) || 0,
+      hargaJual: Number(item.harga_jual) || 0,
+      stokMinimum: Number(item.stok_minimum) || 0,
+      status: item.status,
+      aktif: item.aktif !== false
+    }));
+
+    renderMasterBarang(masterBarangData);
+
+    if (result) {
+      result.className = "result success";
+      result.textContent = "✅ Data Master Barang berhasil dimuat dari Supabase.";
+    }
+
+  } catch (error) {
+    console.error("SUPABASE MASTER BARANG ERROR:", error);
+
+    masterBarangData = [];
+
+    tbody.innerHTML =
+      '<tr><td colspan="11" class="empty-state">❌ Master barang gagal dimuat.</td></tr>';
+
+    if (summary) summary.textContent = "Data gagal dimuat.";
+
+    if (result) {
+      result.className = "result error";
+      result.textContent = "❌ " + (error.message || "Gagal memuat Master Barang.");
+    }
+  }
+}
   function renderMasterBarang(data) {
     const tbody = document.getElementById("masterBarangTableBody");
     const summary = document.getElementById("masterBarangSummary");
