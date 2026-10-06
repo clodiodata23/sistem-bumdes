@@ -1172,6 +1172,22 @@ html, body {
   }
 }
 
+
+/* ============================================================
+   RIWAYAT TRANSAKSI + EDIT / HAPUS
+   ============================================================ */
+.history-panel { margin-top: 20px; }
+.history-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.history-filter { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.history-filter input { max-width:240px; }
+.history-table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:10px; }
+.history-table { min-width:980px; }
+.action-group { display:flex; gap:6px; flex-wrap:wrap; }
+.btn-small { padding:7px 10px; border-radius:7px; font-size:12px; }
+.btn-edit { background:#eef5f0; color:#165938; }
+.btn-delete { background:#fff0ee; color:#a63225; }
+.btn-small:hover { filter:brightness(.97); }
+.history-note { margin-top:10px; }
 </style>
 
 </head>
@@ -2136,10 +2152,20 @@ testSupabaseConnection();
     if (pageName === "penjualan") {
 
       loadSalesProducts();
+      loadSalesHistory();
 
     }
 
 
+
+    if (pageName === "pembelian") {
+      loadPurchaseProducts();
+      loadPurchaseHistory();
+    }
+
+    if (pageName === "pengeluaran") {
+      loadExpenseHistory();
+    }
 
     if (pageName === "kas") {
 
@@ -4491,6 +4517,317 @@ function ambilAngkaHarga(value) {
     return String(value);
   }
 
+
+
+  // ============================================================
+  // RIWAYAT TRANSAKSI + EDIT / HAPUS
+  // ============================================================
+
+  let salesHistoryData = [];
+  let purchaseHistoryData = [];
+  let expenseHistoryData = [];
+
+  function escapeAttr(value) {
+    return escapeHtml(String(value ?? "")).replace(/'/g, "&#39;");
+  }
+
+  function formatTanggalHistory(value) {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value).slice(0,10);
+    return d.toLocaleDateString("id-ID", { day:"2-digit", month:"2-digit", year:"numeric" });
+  }
+
+  function setHistoryResult(id, ok, message) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = "result " + (ok ? "success" : "error");
+    el.textContent = message;
+  }
+
+  async function loadSalesHistory() {
+    const body = document.getElementById("salesHistoryBody");
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="8" class="empty-state">Memuat riwayat...</td></tr>';
+    try {
+      const { data, error } = await supabaseClient.from("penjualan")
+        .select("id_penjualan,tanggal,id_barang,nama_barang,qty,hpp,harga_jual,total_penjualan,total_hpp,laba_kotor,pembayaran,keterangan,link_nota")
+        .order("tanggal", { ascending:false });
+      if (error) throw error;
+      salesHistoryData = Array.isArray(data) ? data : [];
+      renderSalesHistory(salesHistoryData);
+    } catch (error) {
+      body.innerHTML = '<tr><td colspan="8" class="empty-state">❌ Gagal memuat riwayat.</td></tr>';
+      setHistoryResult("salesHistoryResult", false, "❌ " + (error.message || "Gagal memuat riwayat penjualan."));
+    }
+  }
+
+  function renderSalesHistory(data) {
+    const body = document.getElementById("salesHistoryBody");
+    if (!body) return;
+    if (!data.length) { body.innerHTML = '<tr><td colspan="8" class="empty-state">Belum ada transaksi penjualan.</td></tr>'; return; }
+    body.innerHTML = data.map(x => `
+      <tr>
+        <td>${escapeHtml(x.id_penjualan)}</td>
+        <td>${formatTanggalHistory(x.tanggal)}</td>
+        <td>${escapeHtml(x.nama_barang || x.id_barang || "-")}</td>
+        <td>${formatNumber(x.qty)}</td>
+        <td>${formatRupiah(Number(x.harga_jual)||0)}</td>
+        <td>${formatRupiah(Number(x.total_penjualan)||0)}</td>
+        <td>${escapeHtml(x.pembayaran || "-")}</td>
+        <td><div class="action-group">
+          <button class="btn btn-small btn-edit" type="button" onclick="editSale('${escapeAttr(x.id_penjualan)}')">✏️ Edit</button>
+          <button class="btn btn-small btn-delete" type="button" onclick="deleteSale('${escapeAttr(x.id_penjualan)}')">🗑️ Hapus</button>
+        </div></td>
+      </tr>`).join("");
+  }
+
+  function filterSalesHistory() {
+    const q = (document.getElementById("salesHistorySearch")?.value || "").trim().toLowerCase();
+    renderSalesHistory(!q ? salesHistoryData : salesHistoryData.filter(x => [x.id_penjualan,x.id_barang,x.nama_barang,x.pembayaran,x.keterangan].join(" ").toLowerCase().includes(q)));
+  }
+
+  async function editSale(id) {
+    const row = salesHistoryData.find(x => String(x.id_penjualan) === String(id));
+    if (!row) return;
+    const qty = Number(prompt(`Edit jumlah terjual untuk ${row.nama_barang}.
+Jumlah sekarang: ${row.qty}`, row.qty));
+    if (!Number.isFinite(qty) || qty <= 0) return;
+    const harga = Number(prompt(`Edit harga jual per unit.
+Harga sekarang: ${row.harga_jual}`, row.harga_jual));
+    if (!Number.isFinite(harga) || harga < 0) return;
+    const pembayaran = prompt("Edit metode pembayaran (Tunai/Transfer/Piutang)", row.pembayaran || "Tunai");
+    if (pembayaran === null || !pembayaran.trim()) return;
+    const keterangan = prompt("Edit keterangan", row.keterangan || "");
+    if (keterangan === null) return;
+    const total = qty * harga;
+    const hpp = Number(row.hpp) || 0;
+    const totalHpp = qty * hpp;
+    const laba = total - totalHpp;
+    try {
+      const { error } = await supabaseClient.from("penjualan").update({
+        qty, harga_jual: harga, total_penjualan: total, total_hpp: totalHpp, laba_kotor: laba, pembayaran: pembayaran.trim(), keterangan: keterangan.trim() || null
+      }).eq("id_penjualan", id);
+      if (error) throw error;
+      await rebuildStockForBarang(row.id_barang);
+      await syncKasForHistory(id, "penjualan", { tanggal:row.tanggal, pembayaran:pembayaran.trim(), total, nama_barang:row.nama_barang, keterangan:keterangan.trim() });
+      setHistoryResult("salesHistoryResult", true, "✅ Penjualan berhasil diperbarui.");
+      await refreshAfterTransaction();
+    } catch (error) { setHistoryResult("salesHistoryResult", false, "❌ " + (error.message || "Gagal mengedit penjualan.")); }
+  }
+
+  async function deleteSale(id) {
+    const row = salesHistoryData.find(x => String(x.id_penjualan) === String(id));
+    if (!row) return;
+    if (!confirm(`Hapus penjualan ${id} (${row.nama_barang})? Stok dan kas terkait akan disesuaikan.`)) return;
+    try {
+      await supabaseClient.from("kas").delete().eq("referensi", id);
+      const { error } = await supabaseClient.from("penjualan").delete().eq("id_penjualan", id);
+      if (error) throw error;
+      await rebuildStockForBarang(row.id_barang);
+      setHistoryResult("salesHistoryResult", true, "✅ Penjualan berhasil dihapus dan stok diperbarui.");
+      await refreshAfterTransaction();
+    } catch (error) { setHistoryResult("salesHistoryResult", false, "❌ " + (error.message || "Gagal menghapus penjualan.")); }
+  }
+
+  async function loadPurchaseHistory() {
+    const body = document.getElementById("purchaseHistoryBody");
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="9" class="empty-state">Memuat riwayat...</td></tr>';
+    try {
+      const { data, error } = await supabaseClient.from("barang_masuk")
+        .select("id_pembelian,tanggal,id_barang,nama_barang,supplier,qty,harga_beli,total_pembelian,pembayaran,nomor_nota,link_nota,keterangan")
+        .order("tanggal", { ascending:false });
+      if (error) throw error;
+      purchaseHistoryData = Array.isArray(data) ? data : [];
+      renderPurchaseHistory(purchaseHistoryData);
+    } catch (error) { body.innerHTML = '<tr><td colspan="9" class="empty-state">❌ Gagal memuat riwayat.</td></tr>'; setHistoryResult("purchaseHistoryResult", false, "❌ " + (error.message || "Gagal memuat riwayat barang masuk.")); }
+  }
+
+  function renderPurchaseHistory(data) {
+    const body = document.getElementById("purchaseHistoryBody");
+    if (!body) return;
+    if (!data.length) { body.innerHTML = '<tr><td colspan="9" class="empty-state">Belum ada transaksi barang masuk.</td></tr>'; return; }
+    body.innerHTML = data.map(x => `
+      <tr>
+        <td>${escapeHtml(x.id_pembelian)}</td><td>${formatTanggalHistory(x.tanggal)}</td>
+        <td>${escapeHtml(x.nama_barang || x.id_barang || "-")}</td><td>${escapeHtml(x.supplier || "-")}</td>
+        <td>${formatNumber(x.qty)}</td><td>${formatRupiah(Number(x.harga_beli)||0)}</td>
+        <td>${formatRupiah(Number(x.total_pembelian)||0)}</td><td>${escapeHtml(x.pembayaran || "-")}</td>
+        <td><div class="action-group">
+          <button class="btn btn-small btn-edit" type="button" onclick="editPurchase('${escapeAttr(x.id_pembelian)}')">✏️ Edit</button>
+          <button class="btn btn-small btn-delete" type="button" onclick="deletePurchase('${escapeAttr(x.id_pembelian)}')">🗑️ Hapus</button>
+        </div></td>
+      </tr>`).join("");
+  }
+
+  function filterPurchaseHistory() {
+    const q = (document.getElementById("purchaseHistorySearch")?.value || "").trim().toLowerCase();
+    renderPurchaseHistory(!q ? purchaseHistoryData : purchaseHistoryData.filter(x => [x.id_pembelian,x.id_barang,x.nama_barang,x.supplier,x.pembayaran,x.keterangan].join(" ").toLowerCase().includes(q)));
+  }
+
+  async function editPurchase(id) {
+    const row = purchaseHistoryData.find(x => String(x.id_pembelian) === String(id));
+    if (!row) return;
+    const qty = Number(prompt(`Edit jumlah barang masuk untuk ${row.nama_barang}.
+Jumlah sekarang: ${row.qty}`, row.qty));
+    if (!Number.isFinite(qty) || qty <= 0) return;
+    const harga = Number(prompt(`Edit harga beli per unit.
+Harga sekarang: ${row.harga_beli}`, row.harga_beli));
+    if (!Number.isFinite(harga) || harga <= 0) return;
+    const supplier = prompt("Edit supplier", row.supplier || "");
+    if (supplier === null || !supplier.trim()) return;
+    const pembayaran = prompt("Edit metode pembayaran (Tunai/Transfer/Hutang)", row.pembayaran || "Tunai");
+    if (pembayaran === null || !pembayaran.trim()) return;
+    const nomorNota = prompt("Edit nomor nota", row.nomor_nota || "");
+    if (nomorNota === null) return;
+    const keterangan = prompt("Edit keterangan", row.keterangan || "");
+    if (keterangan === null) return;
+    const total = qty * harga;
+    try {
+      const { error } = await supabaseClient.from("barang_masuk").update({ qty, harga_beli:harga, total_pembelian:total, supplier:supplier.trim(), pembayaran:pembayaran.trim(), nomor_nota:nomorNota.trim() || null, keterangan:keterangan.trim() || null }).eq("id_pembelian", id);
+      if (error) throw error;
+      await rebuildStockForBarang(row.id_barang);
+      await syncKasForHistory(id, "barang_masuk", { tanggal:row.tanggal, pembayaran:pembayaran.trim(), total, nama_barang:row.nama_barang, keterangan:keterangan.trim() });
+      setHistoryResult("purchaseHistoryResult", true, "✅ Barang masuk berhasil diperbarui dan stok dihitung ulang.");
+      await refreshAfterTransaction();
+    } catch (error) { setHistoryResult("purchaseHistoryResult", false, "❌ " + (error.message || "Gagal mengedit barang masuk.")); }
+  }
+
+  async function deletePurchase(id) {
+    const row = purchaseHistoryData.find(x => String(x.id_pembelian) === String(id));
+    if (!row) return;
+    if (!confirm(`Hapus barang masuk ${id} (${row.nama_barang})? Stok dan kas terkait akan disesuaikan.`)) return;
+    try {
+      await supabaseClient.from("kas").delete().eq("referensi", id);
+      const { error } = await supabaseClient.from("barang_masuk").delete().eq("id_pembelian", id);
+      if (error) throw error;
+      await rebuildStockForBarang(row.id_barang);
+      setHistoryResult("purchaseHistoryResult", true, "✅ Barang masuk berhasil dihapus dan stok diperbarui.");
+      await refreshAfterTransaction();
+    } catch (error) { setHistoryResult("purchaseHistoryResult", false, "❌ " + (error.message || "Gagal menghapus barang masuk.")); }
+  }
+
+  async function loadExpenseHistory() {
+    const body = document.getElementById("expenseHistoryBody");
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="8" class="empty-state">Memuat riwayat...</td></tr>';
+    try {
+      const { data, error } = await supabaseClient.from("pengeluaran")
+        .select("id_pengeluaran,tanggal,kategori,keterangan,jumlah,pembayaran,referensi,link_nota")
+        .order("tanggal", { ascending:false });
+      if (error) throw error;
+      expenseHistoryData = Array.isArray(data) ? data : [];
+      renderExpenseHistory(expenseHistoryData);
+    } catch (error) { body.innerHTML = '<tr><td colspan="8" class="empty-state">❌ Gagal memuat riwayat.</td></tr>'; setHistoryResult("expenseHistoryResult", false, "❌ " + (error.message || "Gagal memuat riwayat pengeluaran.")); }
+  }
+
+  function renderExpenseHistory(data) {
+    const body = document.getElementById("expenseHistoryBody");
+    if (!body) return;
+    if (!data.length) { body.innerHTML = '<tr><td colspan="8" class="empty-state">Belum ada transaksi pengeluaran.</td></tr>'; return; }
+    body.innerHTML = data.map(x => `
+      <tr>
+        <td>${escapeHtml(x.id_pengeluaran)}</td><td>${formatTanggalHistory(x.tanggal)}</td><td>${escapeHtml(x.kategori || "-")}</td>
+        <td>${escapeHtml(x.keterangan || "-")}</td><td>${formatRupiah(Number(x.jumlah)||0)}</td><td>${escapeHtml(x.pembayaran || "-")}</td>
+        <td>${escapeHtml(x.referensi || "-")}</td>
+        <td><div class="action-group">
+          <button class="btn btn-small btn-edit" type="button" onclick="editExpense('${escapeAttr(x.id_pengeluaran)}')">✏️ Edit</button>
+          <button class="btn btn-small btn-delete" type="button" onclick="deleteExpense('${escapeAttr(x.id_pengeluaran)}')">🗑️ Hapus</button>
+        </div></td>
+      </tr>`).join("");
+  }
+
+  function filterExpenseHistory() {
+    const q = (document.getElementById("expenseHistorySearch")?.value || "").trim().toLowerCase();
+    renderExpenseHistory(!q ? expenseHistoryData : expenseHistoryData.filter(x => [x.id_pengeluaran,x.kategori,x.keterangan,x.pembayaran,x.referensi].join(" ").toLowerCase().includes(q)));
+  }
+
+  async function editExpense(id) {
+    const row = expenseHistoryData.find(x => String(x.id_pengeluaran) === String(id));
+    if (!row) return;
+    const kategori = prompt("Edit kategori", row.kategori || "");
+    if (kategori === null || !kategori.trim()) return;
+    const jumlah = Number(prompt(`Edit jumlah pengeluaran.
+Jumlah sekarang: ${row.jumlah}`, row.jumlah));
+    if (!Number.isFinite(jumlah) || jumlah <= 0) return;
+    const keterangan = prompt("Edit keterangan", row.keterangan || "");
+    if (keterangan === null || !keterangan.trim()) return;
+    const pembayaran = prompt("Edit metode pembayaran (Tunai/Transfer)", row.pembayaran || "Tunai");
+    if (pembayaran === null || !pembayaran.trim()) return;
+    const referensi = prompt("Edit referensi", row.referensi || "");
+    if (referensi === null) return;
+    const linkNota = prompt("Edit link nota", row.link_nota || "");
+    if (linkNota === null) return;
+    try {
+      const { error } = await supabaseClient.from("pengeluaran").update({ kategori:kategori.trim(), jumlah, keterangan:keterangan.trim(), pembayaran:pembayaran.trim(), referensi:referensi.trim() || null, link_nota:linkNota.trim() || null }).eq("id_pengeluaran", id);
+      if (error) throw error;
+      await syncKasForHistory(id, "pengeluaran", { tanggal:row.tanggal, pembayaran:pembayaran.trim(), total:jumlah, kategori:kategori.trim(), keterangan:keterangan.trim() });
+      setHistoryResult("expenseHistoryResult", true, "✅ Pengeluaran berhasil diperbarui.");
+      await refreshAfterTransaction();
+    } catch (error) { setHistoryResult("expenseHistoryResult", false, "❌ " + (error.message || "Gagal mengedit pengeluaran.")); }
+  }
+
+  async function deleteExpense(id) {
+    const row = expenseHistoryData.find(x => String(x.id_pengeluaran) === String(id));
+    if (!row) return;
+    if (!confirm(`Hapus pengeluaran ${id} sebesar ${formatRupiah(Number(row.jumlah)||0)}? Kas terkait akan disesuaikan.`)) return;
+    try {
+      await supabaseClient.from("kas").delete().eq("referensi", id);
+      const { error } = await supabaseClient.from("pengeluaran").delete().eq("id_pengeluaran", id);
+      if (error) throw error;
+      setHistoryResult("expenseHistoryResult", true, "✅ Pengeluaran berhasil dihapus.");
+      await refreshAfterTransaction();
+    } catch (error) { setHistoryResult("expenseHistoryResult", false, "❌ " + (error.message || "Gagal menghapus pengeluaran.")); }
+  }
+
+  async function syncKasForHistory(reference, type, info) {
+    const isCash = String(info.pembayaran || "").toLowerCase() === "tunai";
+    const { data: existing, error: findError } = await supabaseClient.from("kas").select("id_kas").eq("referensi", reference).limit(1);
+    if (findError) throw findError;
+    if (!isCash) {
+      if (existing?.length) { const { error } = await supabaseClient.from("kas").delete().eq("referensi", reference); if (error) throw error; }
+      return;
+    }
+    const total = Number(info.total) || 0;
+    const jenis = type === "penjualan" ? "Masuk" : "Keluar";
+    const kategori = type === "penjualan" ? "Penjualan" : (type === "barang_masuk" ? "Pembelian" : (info.kategori || "Pengeluaran"));
+    const keterangan = info.keterangan || (type === "penjualan" ? `Penjualan ${info.nama_barang || ""}` : type === "barang_masuk" ? `Pembelian ${info.nama_barang || ""}` : "Pengeluaran");
+    const payload = { tanggal:info.tanggal || new Date().toISOString(), jenis, kategori, keterangan, debit:jenis === "Masuk" ? total : 0, kredit:jenis === "Keluar" ? total : 0, referensi:reference };
+    if (existing?.length) {
+      const { error } = await supabaseClient.from("kas").update(payload).eq("referensi", reference);
+      if (error) throw error;
+    } else {
+      const idKas = "KAS-" + Date.now() + "-" + Math.random().toString(36).slice(2,8).toUpperCase();
+      const { error } = await supabaseClient.from("kas").insert({ id_kas:idKas, ...payload });
+      if (error) throw error;
+    }
+  }
+
+  async function rebuildStockForBarang(idBarang) {
+    if (!idBarang) return;
+    const [{ data: stok, error: stokError }, { data: masuk, error: masukError }, { data: jual, error: jualError }] = await Promise.all([
+      supabaseClient.from("stok").select("stok_awal,stok_minimum").eq("id_barang", idBarang).maybeSingle(),
+      supabaseClient.from("barang_masuk").select("qty").eq("id_barang", idBarang),
+      supabaseClient.from("penjualan").select("qty").eq("id_barang", idBarang)
+    ]);
+    if (stokError) throw stokError; if (masukError) throw masukError; if (jualError) throw jualError;
+    if (!stok) return;
+    const barangMasuk = (masuk || []).reduce((n,x)=>n+(Number(x.qty)||0),0);
+    const terjual = (jual || []).reduce((n,x)=>n+(Number(x.qty)||0),0);
+    const stokAwal = Number(stok.stok_awal)||0;
+    const stokAkhir = stokAwal + barangMasuk - terjual;
+    const minimum = Number(stok.stok_minimum)||0;
+    const status = stokAkhir <= 0 ? "HABIS" : (stokAkhir <= minimum ? "MENIPIS" : "AMAN");
+    const { error } = await supabaseClient.from("stok").update({ barang_masuk:barangMasuk, terjual, stok_akhir:stokAkhir, status }).eq("id_barang", idBarang);
+    if (error) throw error;
+    salesProductsLoaded = false; purchaseProductsLoaded = false;
+  }
+
+  async function refreshAfterTransaction() {
+    await Promise.allSettled([loadSalesHistory(), loadPurchaseHistory(), loadExpenseHistory(), loadDashboard(), loadKas(), loadStok()]);
+    salesProductsLoaded = false; purchaseProductsLoaded = false;
+  }
 
 </script>
 
