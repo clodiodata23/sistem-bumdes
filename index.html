@@ -901,6 +901,7 @@
       <button onclick="showPage('stok', this)">📋 Stok</button>
 
       <button onclick="showPage('kas', this)">💰 Kas</button>
+      <button onclick="showPage('laporan', this)">📊 Laporan</button>
 
     </div>
 
@@ -1518,6 +1519,75 @@
 
 
 
+    <!-- LAPORAN -->
+    <section id="page-laporan" class="page">
+      <div class="panel">
+        <div class="table-toolbar">
+          <div>
+            <h2 class="section-title" style="margin-bottom:5px;">Laporan</h2>
+            <div class="help">Ringkasan transaksi berdasarkan periode tanggal.</div>
+          </div>
+          <button class="btn btn-secondary" type="button" onclick="loadLaporan()">↻ Perbarui Laporan</button>
+        </div>
+
+        <div class="form-grid" style="margin-bottom:18px;">
+          <div>
+            <label for="laporanMulai">Tanggal Mulai</label>
+            <input id="laporanMulai" type="date">
+          </div>
+          <div>
+            <label for="laporanSelesai">Tanggal Selesai</label>
+            <input id="laporanSelesai" type="date">
+          </div>
+        </div>
+        <button class="btn btn-primary" type="button" onclick="filterLaporan()">Tampilkan Laporan</button>
+
+        <div class="cards" style="margin-top:18px;">
+          <div class="card"><div class="metric-label">Penjualan</div><div class="metric-value" id="lapTotalPenjualan">Rp0</div></div>
+          <div class="card"><div class="metric-label">Pembelian</div><div class="metric-value" id="lapTotalPembelian">Rp0</div></div>
+          <div class="card"><div class="metric-label">Pengeluaran</div><div class="metric-value" id="lapTotalPengeluaran">Rp0</div></div>
+          <div class="card"><div class="metric-label">Laba Bersih</div><div class="metric-value" id="lapLabaBersih">Rp0</div></div>
+        </div>
+
+        <div class="table-toolbar" style="margin-top:24px;">
+          <h3 class="section-title" style="margin:0;">Penjualan</h3>
+          <div class="help" id="lapPenjualanSummary">0 transaksi</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Tanggal</th><th>Barang</th><th>Qty</th><th>Total</th><th>HPP</th><th>Laba Kotor</th></tr></thead>
+            <tbody id="lapPenjualanBody"><tr><td colspan="7" class="empty-state">Belum ada data.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="table-toolbar" style="margin-top:24px;">
+          <h3 class="section-title" style="margin:0;">Pembelian</h3>
+          <div class="help" id="lapPembelianSummary">0 transaksi</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Tanggal</th><th>Barang</th><th>Supplier</th><th>Qty</th><th>Total</th></tr></thead>
+            <tbody id="lapPembelianBody"><tr><td colspan="6" class="empty-state">Belum ada data.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="table-toolbar" style="margin-top:24px;">
+          <h3 class="section-title" style="margin:0;">Pengeluaran</h3>
+          <div class="help" id="lapPengeluaranSummary">0 transaksi</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Tanggal</th><th>Kategori</th><th>Keterangan</th><th>Metode</th><th>Jumlah</th></tr></thead>
+            <tbody id="lapPengeluaranBody"><tr><td colspan="6" class="empty-state">Belum ada data.</td></tr></tbody>
+          </table>
+        </div>
+
+        <div id="laporanResult" class="result"></div>
+      </div>
+    </section>
+
+
+
   </main>
 
 </div>
@@ -1605,6 +1675,12 @@
     if (pageName === "kas") {
 
       loadKas();
+
+    }
+
+    if (pageName === "laporan") {
+
+      loadLaporan();
 
     }
 
@@ -3118,6 +3194,99 @@ const hasil = await response.json();
     if (Number.isNaN(date.getTime())) return String(value);
     return new Intl.DateTimeFormat("id-ID", {day:"2-digit",month:"2-digit",year:"numeric"}).format(date);
   }
+
+  // ============================================================
+  // LAPORAN
+  // ============================================================
+
+  let laporanData = { penjualan: [], pembelian: [], pengeluaran: [] };
+
+  function tanggalHariIniISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  async function loadLaporan() {
+    const result = document.getElementById("laporanResult");
+    if (result) { result.className = "result"; result.textContent = "Memuat laporan..."; }
+    try {
+      const response = await fetch(API_URL + "?action=getLaporan&ts=" + Date.now(), { cache: "no-store" });
+      const hasil = await response.json();
+      if (hasil.status !== "success") throw new Error(hasil.message || "Gagal mengambil laporan.");
+      laporanData = hasil.data || { penjualan: [], pembelian: [], pengeluaran: [] };
+      const today = tanggalHariIniISO();
+      if (!document.getElementById("laporanMulai").value) document.getElementById("laporanMulai").value = today.slice(0, 8) + "01";
+      if (!document.getElementById("laporanSelesai").value) document.getElementById("laporanSelesai").value = today;
+      filterLaporan();
+    } catch (error) {
+      if (result) { result.className = "result error"; result.textContent = "❌ " + error.message; }
+      console.error("loadLaporan:", error);
+    }
+  }
+
+  function filterLaporan() {
+    const mulai = document.getElementById("laporanMulai").value;
+    const selesai = document.getElementById("laporanSelesai").value;
+    if (mulai && selesai && mulai > selesai) {
+      const result = document.getElementById("laporanResult");
+      result.className = "result error";
+      result.textContent = "❌ Tanggal mulai tidak boleh lebih besar dari tanggal selesai.";
+      return;
+    }
+    const cocok = item => {
+      const t = String(item.tanggal || "").slice(0, 10);
+      return (!mulai || t >= mulai) && (!selesai || t <= selesai);
+    };
+    const penjualan = laporanData.penjualan.filter(cocok);
+    const pembelian = laporanData.pembelian.filter(cocok);
+    const pengeluaran = laporanData.pengeluaran.filter(cocok);
+    const totalPenjualan = penjualan.reduce((s, x) => s + Number(x.total || 0), 0);
+    const totalPembelian = pembelian.reduce((s, x) => s + Number(x.total || 0), 0);
+    const totalPengeluaran = pengeluaran.reduce((s, x) => s + Number(x.jumlah || 0), 0);
+    const labaKotor = penjualan.reduce((s, x) => s + Number(x.laba || 0), 0);
+    const labaBersih = labaKotor - totalPengeluaran;
+    document.getElementById("lapTotalPenjualan").textContent = formatRupiah(totalPenjualan);
+    document.getElementById("lapTotalPembelian").textContent = formatRupiah(totalPembelian);
+    document.getElementById("lapTotalPengeluaran").textContent = formatRupiah(totalPengeluaran);
+    document.getElementById("lapLabaBersih").textContent = formatRupiah(labaBersih);
+    renderLaporanPenjualan(penjualan);
+    renderLaporanPembelian(pembelian);
+    renderLaporanPengeluaran(pengeluaran);
+    const result = document.getElementById("laporanResult");
+    if (result) { result.className = "result"; result.textContent = `Periode: ${mulai || "semua"} s.d. ${selesai || "semua"}`; }
+  }
+
+  function renderLaporanPenjualan(data) {
+    const body = document.getElementById("lapPenjualanBody");
+    document.getElementById("lapPenjualanSummary").textContent = data.length + " transaksi";
+    if (!data.length) { body.innerHTML = '<tr><td colspan="7" class="empty-state">Tidak ada transaksi penjualan pada periode ini.</td></tr>'; return; }
+    body.innerHTML = data.map(x => `<tr><td>${escapeHtml(x.id || "-")}</td><td>${escapeHtml(formatLaporanDate(x.tanggal))}</td><td>${escapeHtml(x.namaBarang || x.idBarang || "-")}</td><td>${Number(x.qty || 0)}</td><td>${formatRupiah(Number(x.total || 0))}</td><td>${formatRupiah(Number(x.hpp || 0))}</td><td>${formatRupiah(Number(x.laba || 0))}</td></tr>`).join("");
+  }
+
+  function renderLaporanPembelian(data) {
+    const body = document.getElementById("lapPembelianBody");
+    document.getElementById("lapPembelianSummary").textContent = data.length + " transaksi";
+    if (!data.length) { body.innerHTML = '<tr><td colspan="6" class="empty-state">Tidak ada transaksi pembelian pada periode ini.</td></tr>'; return; }
+    body.innerHTML = data.map(x => `<tr><td>${escapeHtml(x.id || "-")}</td><td>${escapeHtml(formatLaporanDate(x.tanggal))}</td><td>${escapeHtml(x.namaBarang || x.idBarang || "-")}</td><td>${escapeHtml(x.supplier || "-")}</td><td>${Number(x.qty || 0)}</td><td>${formatRupiah(Number(x.total || 0))}</td></tr>`).join("");
+  }
+
+  function renderLaporanPengeluaran(data) {
+    const body = document.getElementById("lapPengeluaranBody");
+    document.getElementById("lapPengeluaranSummary").textContent = data.length + " transaksi";
+    if (!data.length) { body.innerHTML = '<tr><td colspan="6" class="empty-state">Tidak ada pengeluaran pada periode ini.</td></tr>'; return; }
+    body.innerHTML = data.map(x => `<tr><td>${escapeHtml(x.id || "-")}</td><td>${escapeHtml(formatLaporanDate(x.tanggal))}</td><td>${escapeHtml(x.kategori || "-")}</td><td>${escapeHtml(x.keterangan || "-")}</td><td>${escapeHtml(x.pembayaran || "-")}</td><td>${formatRupiah(Number(x.jumlah || 0))}</td></tr>`).join("");
+  }
+
+  function formatLaporanDate(value) {
+    if (!value) return "-";
+    const parts = String(value).slice(0,10).split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return String(value);
+  }
+
 
 </script>
 
