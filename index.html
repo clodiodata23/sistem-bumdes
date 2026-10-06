@@ -2978,8 +2978,12 @@ function ambilAngkaHarga(value) {
     let idPengeluaran = "";
 
     try {
-      // ID pengeluaran dibuat langsung di browser sebelum disimpan ke Supabase.
-      idPengeluaran = "OU" + Date.now();
+      // ID transaksi dibuat unik agar tidak bentrok dengan primary key Supabase.
+      const waktu = Date.now();
+      const acak = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID().replace(/-/g, "").slice(0, 8)
+        : Math.random().toString(36).slice(2, 10);
+      idPengeluaran = "OU" + waktu + acak;
       const tanggal = new Date().toISOString();
 
       // 1. Simpan pengeluaran ke Supabase.
@@ -3000,6 +3004,7 @@ function ambilAngkaHarga(value) {
 
       // 2. Jika pembayaran Tunai, otomatis catat Kas Keluar.
       if (String(data.pembayaran || "").toLowerCase() === "tunai") {
+        // ID Kas wajib unik karena id_kas adalah primary key.
         const idKas = "KAS-" + idPengeluaran;
 
         const { error: kasError } = await supabaseClient
