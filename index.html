@@ -1435,9 +1435,9 @@ html, body {
 
         <p class="help">
 
-          Sistem akan mengambil nama barang, HPP, dan harga jual dari sheet BARANG.
+          Sistem mengambil nama barang, HPP, dan harga jual langsung dari Supabase.
 
-          Jika pembayaran Tunai, transaksi juga dicatat sebagai kas masuk.
+          Jika pembayaran Tunai, transaksi otomatis dicatat sebagai kas masuk oleh sistem Supabase.
 
         </p>
 
@@ -2506,8 +2506,6 @@ function ambilAngkaHarga(value) {
 
     let salesInserted = false;
     let stockUpdated = false;
-    let kasInserted = false;
-    let kasId = "";
 
     try {
       const { error: salesError } = await supabaseClient.from("penjualan").insert({
@@ -2526,17 +2524,6 @@ function ambilAngkaHarga(value) {
       if (stockError) throw stockError;
       stockUpdated = true;
 
-      if (String(data.pembayaran || "").toLowerCase() === "tunai") {
-        kasId = "KAS-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10).toUpperCase();
-        const { error: kasError } = await supabaseClient.from("kas").insert({
-          id_kas: kasId, tanggal: tanggal, jenis: "MASUK", kategori: "PENJUALAN",
-          keterangan: "Penjualan " + selectedProduct.namaBarang, debit: totalPenjualan,
-          kredit: 0, referensi: idPenjualan
-        });
-        if (kasError) throw kasError;
-        kasInserted = true;
-      }
-
       result.className = "result success";
       result.innerHTML = "✅ Penjualan berhasil disimpan.<br>" +
         "ID: <strong>" + escapeHtml(idPenjualan) + "</strong><br>" +
@@ -2546,14 +2533,15 @@ function ambilAngkaHarga(value) {
         "HPP: <strong>" + formatRupiah(totalHpp) + "</strong><br>" +
         "Laba kotor: <strong>" + formatRupiah(labaKotor) + "</strong><br>" +
         "Stok sekarang: <strong>" + formatNumber(stokBaru) + "</strong>" +
-        (kasInserted ? "<br>Kas: <strong>Kas Masuk otomatis dicatat</strong>" : "");
+        (String(data.pembayaran || "").toLowerCase() === "tunai"
+          ? "<br>Kas: <strong>Kas Masuk otomatis dicatat</strong>"
+          : "");
 
       document.getElementById("salesForm").reset();
       clearSalesProductSelection();
       salesProductsLoaded = false;
       salesProducts = [];
     } catch (error) {
-      if (kasInserted && kasId) await supabaseClient.from("kas").delete().eq("id_kas", kasId);
       if (stockUpdated) await supabaseClient.from("stok").update({ terjual: Number(selectedProduct.terjual) || 0, stok_akhir: stokLama, status: selectedProduct.status || "AMAN" }).eq("id_barang", data.idBarang);
       if (salesInserted) await supabaseClient.from("penjualan").delete().eq("id_penjualan", idPenjualan);
       result.className = "result error";
@@ -2765,7 +2753,7 @@ function ambilAngkaHarga(value) {
 
   // ============================================================
 
-  // SIMPAN BARANG MASUK
+  // SIMPAN BARANG MASUK — SUPABASE + TRIGGER KAS
 
   // ============================================================
 
@@ -2891,30 +2879,6 @@ function ambilAngkaHarga(value) {
 
       if (masterUpdateError) throw masterUpdateError;
 
-      if (String(data.pembayaran || "").toLowerCase() === "tunai") {
-
-        // ID kas harus benar-benar unik.
-        // Sebelumnya memakai KAS-{idPembelian}, sehingga saat transaksi
-        // dicoba ulang dapat berbenturan dengan primary key kas.
-        const idKas = "KAS-" + Date.now() + "-" +
-          Math.random().toString(36).slice(2, 10).toUpperCase();
-
-        const { error: kasError } = await supabaseClient
-          .from("kas")
-          .insert({
-            id_kas: idKas,
-            tanggal: new Date().toISOString(),
-            jenis: "KELUAR",
-            kategori: "PEMBELIAN",
-            keterangan: "Pembelian " + master.nama_barang,
-            debit: 0,
-            kredit: totalPembelian,
-            referensi: idPembelian
-          });
-
-        if (kasError) throw kasError;
-      }
-
       result.className = "result success";
       result.innerHTML =
         "✅ Barang masuk berhasil disimpan.<br>" +
@@ -2923,7 +2887,10 @@ function ambilAngkaHarga(value) {
         "Jumlah masuk: <strong>" + formatNumber(data.qty) + "</strong><br>" +
         "Stok sekarang: <strong>" + formatNumber(stokBaru) + "</strong><br>" +
         "HPP rata-rata: <strong>" + formatRupiah(hppBaru) + "</strong><br>" +
-        "Total pembelian: <strong>" + formatRupiah(totalPembelian) + "</strong>";
+        "Total pembelian: <strong>" + formatRupiah(totalPembelian) + "</strong>" +
+        (String(data.pembayaran || "").toLowerCase() === "tunai"
+          ? "<br>Kas: <strong>Kas Keluar otomatis dicatat</strong>"
+          : "");
 
       document.getElementById("purchaseForm").reset();
       clearPurchaseProductSelection();
@@ -2985,7 +2952,8 @@ function ambilAngkaHarga(value) {
       idPengeluaran = "OU" + unik;
       const tanggal = new Date().toISOString();
 
-      // 1. Simpan pengeluaran ke Supabase.
+      // Simpan pengeluaran ke Supabase.
+      // Jika pembayaran Tunai, trigger Supabase otomatis membuat Kas Keluar.
       const { error: expenseError } = await supabaseClient
         .from("pengeluaran")
         .insert({
@@ -3000,34 +2968,6 @@ function ambilAngkaHarga(value) {
         });
 
       if (expenseError) throw expenseError;
-
-      // 2. Jika pembayaran Tunai, otomatis catat Kas Keluar.
-      if (String(data.pembayaran || "").toLowerCase() === "tunai") {
-        // ID Kas wajib unik karena id_kas adalah primary key.
-        const idKas = "KAS-" + idPengeluaran;
-
-        const { error: kasError } = await supabaseClient
-          .from("kas")
-          .insert({
-            id_kas: idKas,
-            tanggal: tanggal,
-            jenis: "KELUAR",
-            kategori: "PENGELUARAN",
-            keterangan: data.keterangan,
-            debit: 0,
-            kredit: data.jumlah,
-            referensi: idPengeluaran
-          });
-
-        if (kasError) {
-          // Jangan meninggalkan pengeluaran tanpa pasangan kas jika kas gagal.
-          await supabaseClient
-            .from("pengeluaran")
-            .delete()
-            .eq("id_pengeluaran", idPengeluaran);
-          throw kasError;
-        }
-      }
 
       result.className = "result success";
       result.innerHTML =
