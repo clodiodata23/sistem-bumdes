@@ -3,6 +3,8 @@
 <html lang="id">
 
 <head>
+  <link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#165938">
 
   <meta charset="UTF-8">
 
@@ -4936,7 +4938,19 @@ function ambilAngkaHarga(value) {
   });
 })();
 </script>
-
+<script>
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js")
+            .then(() => {
+                console.log("Service Worker berhasil aktif");
+            })
+            .catch(error => {
+                console.error("Service Worker gagal:", error);
+            });
+    });
+}
+</script>
 </body>
 
 </html>

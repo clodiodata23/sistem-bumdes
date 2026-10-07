@@ -1,0 +1,22 @@
+{
+  "name": "Sistem Kas & Inventori BUMDes",
+  "short_name": "BUMDes",
+  "description": "Aplikasi Sistem Kas dan Inventori BUMDes",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#165938",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
