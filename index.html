@@ -1258,6 +1258,13 @@ html, body {
       <button onclick="showPage('kas', this)">💰 Kas</button>
       <button onclick="showPage('laporan', this)">📊 Laporan</button>
 
+      <button
+    type="button"
+    onclick="resetSemuaData()"
+    style="color:#f9f7f7;">
+    ⚠️ Reset Semua Data
+</button>
+
     </div>
 
   </aside>
@@ -4950,7 +4957,197 @@ if ("serviceWorker" in navigator) {
             });
     });
 }
+
 </script>
+
+<script>
+    // ============================================================
+    // RESET SEMUA DATA BUMDes
+    // ============================================================
+
+    async function resetSemuaData() {
+
+        const kode = prompt(
+            "⚠️ PERINGATAN!\n\n" +
+            "Fitur ini akan menghapus SEMUA DATA BUMDes.\n\n" +
+            "Data yang akan dihapus:\n" +
+            "• Penjualan\n" +
+            "• Barang Masuk\n" +
+            "• Pengeluaran\n" +
+            "• Kas\n" +
+            "• Stok\n" +
+            "• Master Barang\n\n" +
+            "Data yang sudah dihapus tidak dapat dikembalikan.\n\n" +
+            "Ketik RESET untuk melanjutkan:"
+        );
+
+        // Jika tidak mengetik RESET
+        if (kode !== "RESET") {
+            alert("Reset dibatalkan.");
+            return;
+        }
+
+        // Konfirmasi terakhir
+        const yakin = confirm(
+            "⚠️ KONFIRMASI TERAKHIR\n\n" +
+            "Apakah kamu benar-benar ingin menghapus SEMUA DATA?"
+        );
+
+        if (!yakin) {
+            alert("Reset dibatalkan.");
+            return;
+        }
+
+        try {
+
+            // ====================================================
+            // 1. HAPUS KAS
+            // ====================================================
+
+            let { error } = await supabaseClient
+                .from("kas")
+                .delete()
+                .not("id_kas", "is", null);
+
+            if (error) throw error;
+
+
+            // ====================================================
+            // 2. HAPUS PENGELUARAN
+            // ====================================================
+
+            ({ error } = await supabaseClient
+                .from("pengeluaran")
+                .delete()
+                .not("id_pengeluaran", "is", null));
+
+            if (error) throw error;
+
+
+            // ====================================================
+            // 3. HAPUS PENJUALAN
+            // ====================================================
+
+            ({ error } = await supabaseClient
+                .from("penjualan")
+                .delete()
+                .not("id_penjualan", "is", null));
+
+            if (error) throw error;
+
+
+            // ====================================================
+            // 4. HAPUS BARANG MASUK
+            // ====================================================
+
+            ({ error } = await supabaseClient
+                .from("barang_masuk")
+                .delete()
+                .not("id_pembelian", "is", null));
+
+            if (error) throw error;
+
+
+            // ====================================================
+            // 5. HAPUS STOK
+            // ====================================================
+
+            ({ error } = await supabaseClient
+                .from("stok")
+                .delete()
+                .not("id_barang", "is", null));
+
+            if (error) throw error;
+
+
+            // ====================================================
+            // 6. HAPUS MASTER BARANG
+            // ====================================================
+
+            ({ error } = await supabaseClient
+                .from("master_barang")
+                .delete()
+                .not("id_barang", "is", null));
+
+            if (error) throw error;
+
+
+            // ====================================================
+            // BERSIHKAN DATA SEMENTARA APLIKASI
+            // ====================================================
+
+            if (typeof salesProducts !== "undefined") {
+                salesProducts = [];
+            }
+
+            if (typeof purchaseProducts !== "undefined") {
+                purchaseProducts = [];
+            }
+
+            if (typeof salesProductsLoaded !== "undefined") {
+                salesProductsLoaded = false;
+            }
+
+            if (typeof purchaseProductsLoaded !== "undefined") {
+                purchaseProductsLoaded = false;
+            }
+
+
+            // ====================================================
+            // BERHASIL
+            // ====================================================
+
+            alert(
+                "✅ SEMUA DATA BERHASIL DIHAPUS.\n\n" +
+                "Database BUMDes sekarang sudah kosong."
+            );
+
+
+            // ====================================================
+            // REFRESH TAMPILAN
+            // ====================================================
+
+            try {
+                await loadDashboard();
+            } catch (e) {}
+
+            try {
+                await loadStok();
+            } catch (e) {}
+
+            try {
+                await loadMasterBarang();
+            } catch (e) {}
+
+            try {
+                await loadSalesHistory();
+            } catch (e) {}
+
+            try {
+                await loadPurchaseHistory();
+            } catch (e) {}
+
+            try {
+                await loadExpenseHistory();
+            } catch (e) {}
+
+            try {
+                await loadKas();
+            } catch (e) {}
+
+
+        } catch (error) {
+
+            console.error("RESET DATA ERROR:", error);
+
+            alert(
+                "❌ RESET GAGAL\n\n" +
+                (error.message || "Terjadi kesalahan saat menghapus data.")
+            );
+        }
+    }
+</script>
+
 </body>
 
 </html>
