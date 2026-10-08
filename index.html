@@ -2275,6 +2275,27 @@ function ambilAngkaHarga(value) {
 
   }
 
+  // Tutup sidebar mobile saat area di luar sidebar diklik.
+  // Tidak memengaruhi tampilan desktop.
+  document.addEventListener("click", function (event) {
+
+    if (window.innerWidth > 700) return;
+
+    const sidebar = document.getElementById("sidebar");
+    const menuButton = document.querySelector(".mobile-menu");
+
+    if (!sidebar || !menuButton) return;
+
+    if (
+      sidebar.classList.contains("open") &&
+      !sidebar.contains(event.target) &&
+      !menuButton.contains(event.target)
+    ) {
+      sidebar.classList.remove("open");
+    }
+
+  });
+
 
 
 
