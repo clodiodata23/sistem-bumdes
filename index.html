@@ -1418,6 +1418,21 @@ th.interactive-sort-active .interactive-sort-icon{
     justify-content:flex-end;
   }
 }
+
+
+/* Kas: sembunyikan kolom teknis ID Kas dan Referensi agar tabel lebih ringkas.
+   Data tetap dipertahankan di DOM untuk pencarian/riwayat internal. */
+#kasTable th:nth-child(1),
+#kasTable td:nth-child(1),
+#kasTable th:nth-child(9),
+#kasTable td:nth-child(9) {
+  display: none !important;
+}
+
+#kasTable th,
+#kasTable td {
+  white-space: nowrap;
+}
 </style>
 
 </head>
@@ -4446,7 +4461,7 @@ function ambilAngkaHarga(value) {
 
     } catch (error) {
       kasData = [];
-      body.innerHTML = '<tr><td colspan="9" class="empty-state">❌ Data kas gagal dimuat.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="empty-state">❌ Data kas gagal dimuat.</td></tr>';
       if (summary) summary.textContent = "Gagal memuat data kas.";
       if (result) {
         result.className = "result error";
@@ -4461,7 +4476,7 @@ function ambilAngkaHarga(value) {
     const summary = document.getElementById("kasSummary");
     if (!body) return;
     if (!Array.isArray(data) || !data.length) {
-      body.innerHTML = '<tr><td colspan="9" class="empty-state">Belum ada transaksi kas.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="empty-state">Belum ada transaksi kas.</td></tr>';
       if (summary) summary.textContent = "0 transaksi";
       return;
     }
