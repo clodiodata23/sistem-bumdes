@@ -1200,6 +1200,178 @@ html, body {
    /* tempel isi elegant-theme.css di sini */
    </style>
       <link rel="stylesheet" href="elegant-theme.css">
+
+<style id="interactive-tables-style">
+/* ============================================================
+   TABEL INTERAKTIF - SEMUA TABEL DATA
+   Search existing tetap dipakai; tambahan: page size,
+   pagination, sorting kolom, dan tampilan baris lebih rapi.
+   ============================================================ */
+.table-wrap,
+.history-table-wrap{
+  position:relative;
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+.table-wrap > table,
+.history-table-wrap > table{
+  margin:0;
+}
+
+.table-wrap th,
+.history-table-wrap th{
+  position:relative;
+  user-select:none;
+  cursor:pointer;
+  vertical-align:middle;
+}
+
+.table-wrap th.interactive-sortable:hover,
+.history-table-wrap th.interactive-sortable:hover{
+  background:#eef5f0;
+}
+
+.interactive-sort-icon{
+  display:inline-block;
+  margin-left:6px;
+  color:#8a9890;
+  font-size:11px;
+  font-weight:700;
+  min-width:12px;
+}
+
+th.interactive-sort-active .interactive-sort-icon{
+  color:var(--primary);
+}
+
+.interactive-table-controls{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  padding:9px 2px 2px;
+}
+
+.interactive-page-info{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.4;
+}
+
+.interactive-page-size{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.interactive-page-size select{
+  width:auto;
+  min-width:74px;
+  padding:7px 28px 7px 9px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:#fff;
+  color:var(--text);
+  font-size:12px;
+}
+
+.interactive-pagination{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:5px;
+  flex-wrap:wrap;
+}
+
+.interactive-pagination button{
+  min-width:32px;
+  height:32px;
+  padding:0 9px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:#fff;
+  color:var(--primary);
+  cursor:pointer;
+  font-size:12px;
+  font-weight:700;
+}
+
+.interactive-pagination button:hover:not(:disabled){
+  background:#eef5f0;
+  border-color:#cbded2;
+}
+
+.interactive-pagination button.active{
+  background:var(--primary);
+  color:#fff;
+  border-color:var(--primary);
+}
+
+.interactive-pagination button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.interactive-pagination .ellipsis{
+  padding:0 3px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.interactive-table-empty-page{
+  display:none;
+}
+
+.interactive-table-controls.compact{
+  margin-top:8px;
+}
+
+@media(max-width:700px){
+  .interactive-table-controls{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .interactive-pagination{
+    justify-content:flex-start;
+    width:100%;
+  }
+
+  .interactive-page-info{
+    width:100%;
+  }
+}
+
+/* Membuat tabel panjang tetap enak dibaca */
+.table-wrap tbody tr:hover,
+.history-table-wrap tbody tr:hover{
+  background:#fafcfb;
+}
+
+.table-wrap td,
+.history-table-wrap td{
+  vertical-align:middle;
+}
+
+/* Tombol aksi tetap rapi dalam satu baris */
+.history-actions{
+  flex-wrap:nowrap;
+  white-space:nowrap;
+}
+
+.table-wrap td:last-child .btn,
+.table-wrap td:last-child button{
+  white-space:nowrap;
+}
+</style>
+
 </head>
 
 
@@ -5170,6 +5342,379 @@ if ("serviceWorker" in navigator) {
             );
         }
     }
+</script>
+
+
+<script id="interactive-tables-script">
+/* ============================================================
+   TABEL INTERAKTIF UNIVERSAL
+   Berlaku untuk semua tabel yang mempunyai <tbody id="...">.
+   - 10 / 20 / 50 / 100 baris
+   - Pagination
+   - Sorting klik header
+   - Bekerja dengan tabel yang diisi ulang oleh Supabase
+   ============================================================ */
+(function(){
+  "use strict";
+
+  const tableStates = new WeakMap();
+  let observerStarted = false;
+  let refreshTimer = null;
+
+  function getRows(tbody){
+    return Array.from(tbody.children).filter(el => el.tagName === "TR");
+  }
+
+  function isEmptyRow(row){
+    return !!row.querySelector(".empty-state, .history-empty") ||
+           row.textContent.trim().toLowerCase().includes("belum dimuat") ||
+           row.textContent.trim().toLowerCase().includes("memuat data");
+  }
+
+  function cleanText(value){
+    return String(value ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function parseValue(text){
+    const raw = cleanText(text);
+    if (!raw) return {type:"empty", value:""};
+
+    // Format tanggal Indonesia / ISO.
+    const dateMatch = raw.match(
+      /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/
+    );
+    if(dateMatch){
+      const d = new Date(
+        Number(dateMatch[3]),
+        Number(dateMatch[2])-1,
+        Number(dateMatch[1]),
+        Number(dateMatch[4] || 0),
+        Number(dateMatch[5] || 0)
+      );
+      return {type:"date", value:d.getTime()};
+    }
+
+    const iso = Date.parse(raw);
+    if(/^\d{4}-\d{2}-\d{2}/.test(raw) && !Number.isNaN(iso)){
+      return {type:"date", value:iso};
+    }
+
+    // Angka, termasuk Rp, %, titik ribuan, dan koma desimal.
+    const numeric = raw
+      .replace(/Rp/gi,"")
+      .replace(/\s/g,"")
+      .replace(/%/g,"")
+      .replace(/\.(?=\d{3}(?:\D|$))/g,"")
+      .replace(",",".")
+      .replace(/[^\d.\-]/g,"");
+
+    if(numeric && /^-?\d+(?:\.\d+)?$/.test(numeric)){
+      return {type:"number", value:Number(numeric)};
+    }
+
+    return {type:"text", value:raw.toLocaleLowerCase("id-ID")};
+  }
+
+  function compareCells(a,b){
+    const av = parseValue(a);
+    const bv = parseValue(b);
+
+    if(av.type === "empty" && bv.type !== "empty") return -1;
+    if(av.type !== "empty" && bv.type === "empty") return 1;
+
+    if(av.type === bv.type){
+      if(av.value < bv.value) return -1;
+      if(av.value > bv.value) return 1;
+      return 0;
+    }
+
+    return String(av.value).localeCompare(String(bv.value),"id-ID",{
+      numeric:true,
+      sensitivity:"base"
+    });
+  }
+
+  function makeControls(table, state){
+    let controls = table.parentElement.querySelector(
+      ':scope > .interactive-table-controls'
+    );
+
+    if(!controls){
+      controls = document.createElement("div");
+      controls.className = "interactive-table-controls";
+      table.parentElement.appendChild(controls);
+    }
+
+    controls.innerHTML = "";
+
+    const info = document.createElement("div");
+    info.className = "interactive-page-info";
+
+    const sizeBox = document.createElement("div");
+    sizeBox.className = "interactive-page-size";
+
+    const sizeLabel = document.createElement("span");
+    sizeLabel.textContent = "Tampilkan";
+
+    const select = document.createElement("select");
+    [10,20,50,100].forEach(size => {
+      const option = document.createElement("option");
+      option.value = String(size);
+      option.textContent = String(size);
+      if(size === state.pageSize) option.selected = true;
+      select.appendChild(option);
+    });
+
+    select.addEventListener("change", function(){
+      state.pageSize = Number(this.value);
+      state.page = 1;
+      render(table,state);
+    });
+
+    sizeBox.append(sizeLabel,select);
+
+    const pagination = document.createElement("div");
+    pagination.className = "interactive-pagination";
+
+    controls.append(info,sizeBox,pagination);
+    state.info = info;
+    state.pagination = pagination;
+  }
+
+  function renderPagination(state){
+    const pagination = state.pagination;
+    if(!pagination) return;
+
+    pagination.innerHTML = "";
+
+    const totalPages = Math.max(1, Math.ceil(state.rows.length / state.pageSize));
+    state.page = Math.min(Math.max(1,state.page),totalPages);
+
+    function addButton(label,page,disabled,active){
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = label;
+      btn.disabled = !!disabled;
+      if(active) btn.classList.add("active");
+      btn.addEventListener("click",function(){
+        state.page = page;
+        render(state.table,state);
+      });
+      pagination.appendChild(btn);
+    }
+
+    addButton("‹",state.page-1,state.page <= 1,false);
+
+    const pages = [];
+    if(totalPages <= 7){
+      for(let i=1;i<=totalPages;i++) pages.push(i);
+    }else{
+      pages.push(1);
+      if(state.page > 4) pages.push("…");
+
+      const start = Math.max(2,state.page-1);
+      const end = Math.min(totalPages-1,state.page+1);
+      for(let i=start;i<=end;i++) pages.push(i);
+
+      if(state.page < totalPages-3) pages.push("…");
+      pages.push(totalPages);
+    }
+
+    pages.forEach(page => {
+      if(page === "…"){
+        const span = document.createElement("span");
+        span.className = "ellipsis";
+        span.textContent = "…";
+        pagination.appendChild(span);
+      }else{
+        addButton(String(page),page,false,page === state.page);
+      }
+    });
+
+    addButton("›",state.page+1,state.page >= totalPages,false);
+  }
+
+  function updateHeaderIcons(table,state){
+    const headers = table.tHead ? Array.from(table.tHead.rows[0].cells) : [];
+    headers.forEach((th,index) => {
+      if(th.dataset.interactiveReady !== "1"){
+        th.dataset.interactiveReady = "1";
+        th.classList.add("interactive-sortable");
+
+        const icon = document.createElement("span");
+        icon.className = "interactive-sort-icon";
+        icon.textContent = "↕";
+        th.appendChild(icon);
+
+        th.addEventListener("click",function(){
+          if(state.sortColumn === index){
+            state.sortDirection = state.sortDirection === "asc" ? "desc" : "asc";
+          }else{
+            state.sortColumn = index;
+            state.sortDirection = "asc";
+          }
+
+          sortRows(state);
+          state.page = 1;
+          render(table,state);
+        });
+      }
+
+      const icon = th.querySelector(".interactive-sort-icon");
+      th.classList.toggle(
+        "interactive-sort-active",
+        state.sortColumn === index
+      );
+
+      if(icon){
+        icon.textContent =
+          state.sortColumn !== index ? "↕" :
+          state.sortDirection === "asc" ? "↑" : "↓";
+      }
+    });
+  }
+
+  function sortRows(state){
+    if(state.sortColumn < 0) return;
+
+    state.rows.sort((rowA,rowB) => {
+      const a = rowA.cells[state.sortColumn]?.textContent || "";
+      const b = rowB.cells[state.sortColumn]?.textContent || "";
+      const result = compareCells(a,b);
+      return state.sortDirection === "desc" ? -result : result;
+    });
+  }
+
+  function render(table,state){
+    const tbody = state.tbody;
+    if(!tbody) return;
+
+    // Jangan mengganggu placeholder kosong.
+    if(state.rows.length === 0){
+      Array.from(tbody.children).forEach(row => row.style.display = "");
+      if(state.info) state.info.textContent = "0 data";
+      if(state.pagination) state.pagination.innerHTML = "";
+      return;
+    }
+
+    const total = state.rows.length;
+    const totalPages = Math.max(1,Math.ceil(total/state.pageSize));
+    state.page = Math.min(state.page,totalPages);
+
+    const start = (state.page-1)*state.pageSize;
+    const end = Math.min(start+state.pageSize,total);
+
+    state.rows.forEach(row => row.style.display = "none");
+    state.rows.slice(start,end).forEach(row => row.style.display = "");
+
+    const from = start + 1;
+    const to = end;
+
+    if(state.info){
+      state.info.textContent =
+        `${from}–${to} dari ${total} data`;
+    }
+
+    renderPagination(state);
+  }
+
+  function setupTable(table){
+    const tbody = table.tBodies && table.tBodies[0];
+    if(!tbody || !tbody.id) return;
+
+    let state = tableStates.get(table);
+
+    if(!state){
+      state = {
+        table,
+        tbody,
+        rows: [],
+        page: 1,
+        pageSize: 20,
+        sortColumn: -1,
+        sortDirection: "asc",
+        lastSignature: ""
+      };
+      tableStates.set(table,state);
+    }
+
+    // Ambil baris terbaru dari hasil render aplikasi.
+    const currentRows = getRows(tbody).filter(row => !isEmptyRow(row));
+    const signature = currentRows.map(row => row.outerHTML).join("\n");
+
+    // Jika aplikasi baru mengisi ulang tabel, reset data yang dikelola.
+    if(signature !== state.lastSignature){
+      state.rows = currentRows.slice();
+
+      if(state.sortColumn >= 0){
+        sortRows(state);
+      }
+
+      state.lastSignature = signature;
+    }
+
+    makeControls(table,state);
+    updateHeaderIcons(table,state);
+    render(table,state);
+  }
+
+  function setupAll(){
+    document.querySelectorAll(
+      ".table-wrap > table, .history-table-wrap > table"
+    ).forEach(setupTable);
+  }
+
+  function scheduleSetup(){
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(setupAll,60);
+  }
+
+  function startObserver(){
+    if(observerStarted) return;
+    observerStarted = true;
+
+    const observer = new MutationObserver(function(mutations){
+      let relevant = false;
+
+      for(const mutation of mutations){
+        if(mutation.type !== "childList") continue;
+
+        const target = mutation.target;
+        if(target && target.tagName === "TBODY"){
+          relevant = true;
+          break;
+        }
+      }
+
+      if(relevant) scheduleSetup();
+    });
+
+    observer.observe(document.body,{
+      subtree:true,
+      childList:true
+    });
+  }
+
+  function init(){
+    setupAll();
+    startObserver();
+
+    // Beberapa halaman memuat data sedikit setelah navigasi.
+    setTimeout(setupAll,300);
+    setTimeout(setupAll,1000);
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded",init);
+  }else{
+    init();
+  }
+
+  // Bisa dipanggil dari script aplikasi setelah filter/load selesai.
+  window.refreshInteractiveTables = setupAll;
+})();
 </script>
 
 </body>
