@@ -1250,12 +1250,12 @@ th.interactive-sort-active .interactive-sort-icon{
 .interactive-table-controls{
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start;
   gap:10px;
   flex-wrap:wrap;
   margin:0 0 8px;
   padding:0;
-  min-height:34px;
+  min-height:32px;
 }
 
 .interactive-page-info{
@@ -1360,14 +1360,14 @@ th.interactive-sort-active .interactive-sort-icon{
 .table-wrap td,
 .history-table-wrap th,
 .history-table-wrap td{
-  padding:8px 10px;
-  line-height:1.25;
+  padding:6px 9px;
+  line-height:1.2;
   vertical-align:middle;
 }
 
 .table-wrap tbody tr,
 .history-table-wrap tbody tr{
-  height:44px;
+  height:38px;
 }
 
 /* Tombol aksi tetap rapi dalam satu baris */
@@ -5485,28 +5485,34 @@ if ("serviceWorker" in navigator) {
   }
 
   function makeControls(table, state){
-    let controls = table.parentElement.querySelector(
-      ':scope > .interactive-table-controls'
-    );
+    const tableWrap = table.parentElement;
 
-    if(!controls){
+    // Kontrol HARUS berada di dalam pembungkus tabel.
+    // Dengan begitu kontrol ikut tersembunyi saat halaman/modul lain tidak aktif
+    // dan tidak pernah menumpuk di halaman Master Barang.
+    let controls = state.controls;
+
+    if(!controls || !controls.isConnected || controls.parentElement !== tableWrap){
+      // Bersihkan kontrol lama yang mungkin dibuat versi sebelumnya.
+      if(tableWrap){
+        tableWrap.querySelectorAll(":scope > .interactive-table-controls")
+          .forEach(el => el.remove());
+      }
+
       controls = document.createElement("div");
       controls.className = "interactive-table-controls";
+      controls.dataset.tableControls = "1";
 
-      // Letakkan kontrol di atas .table-wrap/.history-table-wrap.
-      // Ini mencegah dropdown "Tampilkan 20" ikut turun ke bawah tabel.
-      const tableWrap = table.parentElement;
-      if(tableWrap && tableWrap.parentElement){
-        tableWrap.parentElement.insertBefore(controls, tableWrap);
+      if(tableWrap){
+        tableWrap.insertBefore(controls, table);
       }else{
         table.parentElement.insertBefore(controls, table);
       }
+
+      state.controls = controls;
     }
 
     controls.innerHTML = "";
-
-    const info = document.createElement("div");
-    info.className = "interactive-page-info";
 
     const sizeBox = document.createElement("div");
     sizeBox.className = "interactive-page-size";
@@ -5531,10 +5537,15 @@ if ("serviceWorker" in navigator) {
 
     sizeBox.append(sizeLabel,select);
 
+    const info = document.createElement("div");
+    info.className = "interactive-page-info";
+
     const pagination = document.createElement("div");
     pagination.className = "interactive-pagination";
 
-    controls.append(info,sizeBox,pagination);
+    // Urutan: jumlah data -> informasi -> pagination, semuanya di atas tabel.
+    controls.append(sizeBox, info, pagination);
+
     state.info = info;
     state.pagination = pagination;
   }
@@ -5717,6 +5728,15 @@ if ("serviceWorker" in navigator) {
   }
 
   function setupAll(){
+    // Hapus kontrol yatim dari versi lama yang pernah menaruh kontrol
+    // di luar pembungkus tabel.
+    document.querySelectorAll(".interactive-table-controls").forEach(el => {
+      const parent = el.parentElement;
+      if(!parent || !parent.matches(".table-wrap, .history-table-wrap")){
+        el.remove();
+      }
+    });
+
     document.querySelectorAll(
       ".table-wrap > table, .history-table-wrap > table"
     ).forEach(setupTable);
