@@ -1253,8 +1253,9 @@ th.interactive-sort-active .interactive-sort-icon{
   justify-content:space-between;
   gap:10px;
   flex-wrap:wrap;
-  margin-top:10px;
-  padding:9px 2px 2px;
+  margin:0 0 8px;
+  padding:0;
+  min-height:34px;
 }
 
 .interactive-page-info{
@@ -1355,9 +1356,18 @@ th.interactive-sort-active .interactive-sort-icon{
   background:#fafcfb;
 }
 
+.table-wrap th,
 .table-wrap td,
+.history-table-wrap th,
 .history-table-wrap td{
+  padding:8px 10px;
+  line-height:1.25;
   vertical-align:middle;
+}
+
+.table-wrap tbody tr,
+.history-table-wrap tbody tr{
+  height:44px;
 }
 
 /* Tombol aksi tetap rapi dalam satu baris */
@@ -1369,6 +1379,44 @@ th.interactive-sort-active .interactive-sort-icon{
 .table-wrap td:last-child .btn,
 .table-wrap td:last-child button{
   white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:7px 10px;
+  margin:2px 4px 2px 0;
+  font-size:12px;
+  line-height:1.2;
+}
+
+.table-wrap td:last-child,
+.history-table-wrap td:last-child{
+  white-space:nowrap;
+}
+
+.interactive-page-size{
+  order:1;
+}
+.interactive-page-info{
+  order:2;
+  flex:1;
+}
+.interactive-pagination{
+  order:3;
+}
+
+@media(max-width:700px){
+  .interactive-table-controls{
+    flex-direction:row;
+    align-items:center;
+  }
+  .interactive-page-info{
+    width:auto;
+    flex:1;
+  }
+  .interactive-pagination{
+    width:auto;
+    justify-content:flex-end;
+  }
 }
 </style>
 
@@ -5444,7 +5492,15 @@ if ("serviceWorker" in navigator) {
     if(!controls){
       controls = document.createElement("div");
       controls.className = "interactive-table-controls";
-      table.parentElement.appendChild(controls);
+
+      // Letakkan kontrol di atas .table-wrap/.history-table-wrap.
+      // Ini mencegah dropdown "Tampilkan 20" ikut turun ke bawah tabel.
+      const tableWrap = table.parentElement;
+      if(tableWrap && tableWrap.parentElement){
+        tableWrap.parentElement.insertBefore(controls, tableWrap);
+      }else{
+        table.parentElement.insertBefore(controls, table);
+      }
     }
 
     controls.innerHTML = "";
