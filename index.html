@@ -1567,8 +1567,292 @@ th.interactive-sort-active .interactive-sort-icon{
 }
 </style>
 
-</head>
+<style id="premium-3d-dashboard">
+/* =========================================================
+   PREMIUM 3D DASHBOARD / TOPBAR / STATUS
+   ========================================================= */
+.topbar{
+  position:relative;
+  padding:18px 20px 20px;
+  margin-bottom:26px;
+  border:1px solid rgba(22,89,56,.10);
+  border-radius:18px;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.98),rgba(246,250,247,.96));
+  box-shadow:
+    0 12px 28px rgba(15,69,42,.07),
+    inset 0 1px 0 rgba(255,255,255,.95);
+  overflow:hidden;
+}
 
+.topbar::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  width:7px;
+  height:100%;
+  background:linear-gradient(180deg,#f2d28b,#165938);
+  border-radius:18px 0 0 18px;
+}
+
+.topbar::after{
+  content:"";
+  position:absolute;
+  right:-70px;
+  top:-90px;
+  width:210px;
+  height:210px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(22,89,56,.10),rgba(22,89,56,0) 68%);
+  pointer-events:none;
+}
+
+.topbar h1{
+  position:relative;
+  z-index:1;
+  margin:0 0 7px;
+  color:#123d2a;
+  font-size:29px;
+  font-weight:800;
+  letter-spacing:-.7px;
+  text-shadow:0 1px 0 rgba(255,255,255,.8);
+}
+
+.topbar p{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  color:#60736a;
+  font-size:13px;
+}
+
+.topbar p::before{
+  content:"";
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#f2d28b;
+  box-shadow:0 1px 3px rgba(0,0,0,.15),0 0 0 3px rgba(242,210,139,.18);
+}
+
+.connection{
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 13px 8px 9px;
+  border-radius:14px;
+  background:linear-gradient(145deg,#ffffff,#edf5f0);
+  border:1px solid #cfe1d7;
+  box-shadow:
+    0 7px 15px rgba(22,89,56,.10),
+    inset 0 1px 0 rgba(255,255,255,.95);
+  color:#17603a;
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+}
+
+.connection::before{
+  content:"";
+  width:27px;
+  height:27px;
+  flex:0 0 27px;
+  border-radius:9px;
+  background:linear-gradient(145deg,#2f9a68,#165938);
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:
+    0 4px 8px rgba(15,69,42,.25),
+    inset 0 1px 1px rgba(255,255,255,.35);
+}
+
+.connection::after{
+  content:"✓";
+  position:absolute;
+  left:15px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#fff;
+  font-size:13px;
+  font-weight:900;
+  text-shadow:0 1px 2px rgba(0,0,0,.25);
+}
+
+.connection.ok{
+  color:#17603a;
+  border-color:#b9d9c7;
+  background:linear-gradient(145deg,#ffffff,#eef8f2);
+}
+
+.connection.error{
+  color:#a63225;
+  border-color:#e7bbb4;
+  background:linear-gradient(145deg,#fff,#fff2f0);
+}
+
+.connection.error::before{
+  background:linear-gradient(145deg,#dc6b5e,#a63225);
+}
+
+.connection.error::after{content:"!";}
+
+/* Section titles with small 3D badge */
+.panel .section-title{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  color:#173d2c;
+}
+
+.panel .section-title::before{
+  content:"";
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  border-radius:10px;
+  background:linear-gradient(145deg,#2f8b61,#165938);
+  border:1px solid rgba(255,255,255,.45);
+  box-shadow:
+    0 5px 10px rgba(15,69,42,.20),
+    inset 0 1px 2px rgba(255,255,255,.35),
+    inset 0 -2px 3px rgba(0,0,0,.12);
+}
+
+#page-dashboard .grid-2 > .panel:first-child .section-title::after{
+  content:"▦";
+  position:absolute;
+  margin-left:10px;
+  color:#f4dfaa;
+  font-size:17px;
+  font-weight:900;
+}
+
+#page-dashboard .grid-2 > .panel:last-child .section-title::after{
+  content:"✓";
+  position:absolute;
+  margin-left:10px;
+  color:#f4dfaa;
+  font-size:16px;
+  font-weight:900;
+}
+
+#page-dashboard .grid-2 > .panel .section-title{position:relative;}
+
+/* Inventory/status information boxes */
+#dashboardInventorySummary,
+#dashboardStatus{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:52px;
+  padding:10px 14px 10px 11px;
+  background:linear-gradient(145deg,#fbfdfc,#f2f7f4);
+  border:1px solid #dbe8e0;
+  border-radius:13px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    0 5px 12px rgba(22,89,56,.045);
+  color:#53685e;
+}
+
+.summary-icon-3d,
+.status-icon-3d{
+  position:relative;
+  width:31px;
+  height:31px;
+  flex:0 0 31px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:9px;
+  color:#fff;
+  background:linear-gradient(145deg,#4da978,#165938);
+  border:1px solid rgba(255,255,255,.55);
+  box-shadow:
+    0 5px 9px rgba(15,69,42,.22),
+    inset 0 1px 2px rgba(255,255,255,.35),
+    inset 0 -2px 3px rgba(0,0,0,.12);
+  text-shadow:0 1px 2px rgba(0,0,0,.25);
+}
+
+.summary-icon-3d::before,
+.status-icon-3d::before{
+  content:"";
+  position:absolute;
+  width:10px;
+  height:4px;
+  top:4px;
+  left:6px;
+  border-radius:99px;
+  background:rgba(255,255,255,.28);
+  transform:rotate(-25deg);
+}
+
+.summary-icon-3d svg,
+.status-icon-3d svg{
+  width:17px;
+  height:17px;
+  stroke:#fff;
+  stroke-width:1.9;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));
+}
+
+.status-icon-3d.ok{
+  background:linear-gradient(145deg,#4caf78,#17603a);
+}
+
+.status-icon-3d.error{
+  background:linear-gradient(145deg,#df7568,#a63225);
+}
+
+/* Refresh button gets a subtle premium treatment */
+#page-dashboard .btn.btn-primary{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border-radius:11px;
+  box-shadow:0 6px 12px rgba(15,69,42,.18),inset 0 1px 0 rgba(255,255,255,.15);
+}
+
+.refresh-icon-3d{
+  display:inline-flex;
+  width:23px;
+  height:23px;
+  align-items:center;
+  justify-content:center;
+  border-radius:7px;
+  background:linear-gradient(145deg,rgba(255,255,255,.22),rgba(255,255,255,.06));
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.18),0 2px 4px rgba(0,0,0,.14);
+}
+
+.refresh-icon-3d svg{
+  width:14px;
+  height:14px;
+  stroke:#fff;
+  fill:none;
+  stroke-width:2;
+  stroke-linecap:round;
+}
+
+@media(max-width:700px){
+  .topbar{padding:15px 14px 16px;}
+  .topbar h1{font-size:22px;}
+  .connection{padding-right:10px;}
+  .connection::before{width:25px;height:25px;flex-basis:25px;}
+  .connection::after{left:14px;}
+}
+
+</style>
+</head>
 
 
 <body>
@@ -1684,9 +1968,7 @@ th.interactive-sort-active .interactive-sort-icon{
 
 
       <div class="connection" id="connectionStatus">
-
-        ⏳ Mengecek koneksi...
-
+        Mengecek koneksi...
       </div>
 
     </div>
@@ -1743,7 +2025,12 @@ th.interactive-sort-active .interactive-sort-icon{
 
           <div class="status-box" id="dashboardStatus">Mengecek koneksi Supabase...</div>
 
-          <button class="btn btn-primary" type="button" onclick="loadDashboard()" style="margin-top:12px;">↻ Perbarui Dashboard</button>
+          <button class="btn btn-primary" type="button" onclick="loadDashboard()" style="margin-top:12px;">
+            <span class="refresh-icon-3d" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.8-4L3 10"/><path d="M3 5v5h5"/><path d="M4 13a8 8 0 0 0 14.8 4L21 14"/><path d="M21 19v-5h-5"/></svg>
+            </span>
+            Perbarui Dashboard
+          </button>
 
         </div>
 
@@ -2711,17 +2998,17 @@ function ambilAngkaHarga(value) {
 
       if (error) throw error;
 
-      status.textContent = "● Terhubung";
+      status.innerHTML = "Terhubung";
       status.className = "connection ok";
       if (dashboardStatus) {
-        dashboardStatus.textContent = "✅ Terhubung ke Supabase.";
+        dashboardStatus.innerHTML = '<span class="status-icon-3d ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span>Terhubung ke Supabase.</span>';
       }
 
     } catch (error) {
-      status.textContent = "● Tidak terhubung";
+      status.innerHTML = "Tidak terhubung";
       status.className = "connection error";
       if (dashboardStatus) {
-        dashboardStatus.textContent = "❌ Koneksi Supabase gagal.";
+        dashboardStatus.innerHTML = '<span class="status-icon-3d error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 7v6"/><path d="M12 17h.01"/></svg></span><span>Koneksi Supabase gagal.</span>';
       }
       console.error("cekKoneksi Supabase:", error);
     }
@@ -3625,23 +3912,24 @@ function ambilAngkaHarga(value) {
 
       if (inventoryEl) {
         inventoryEl.innerHTML =
-          "📦 <strong>" + formatNumber(totalJenisBarang) + "</strong> jenis barang • " +
-          "<strong>" + formatNumber(totalStokUnit) + "</strong> unit stok • " +
-          "<strong>" + formatNumber(stokAman) + "</strong> aman • " +
-          "<strong>" + formatNumber(stokMenipis) + "</strong> menipis • " +
-          "<strong>" + formatNumber(stokHabis) + "</strong> habis";
+          '<span class="summary-icon-3d" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5z"/><path d="M12 21v-8.5"/><path d="m4 8.5 8 4.5 8-4.5"/></svg></span>' +
+          '<span><strong>' + formatNumber(totalJenisBarang) + '</strong> jenis barang • ' +
+          '<strong>' + formatNumber(totalStokUnit) + '</strong> unit stok • ' +
+          '<strong>' + formatNumber(stokAman) + '</strong> aman • ' +
+          '<strong>' + formatNumber(stokMenipis) + '</strong> menipis • ' +
+          '<strong>' + formatNumber(stokHabis) + '</strong> habis</span>';
       }
 
       if (statusEl) {
         statusEl.className = "status-box";
-        statusEl.textContent =
-          "✅ Dashboard berhasil diperbarui dari Supabase.";
+        statusEl.innerHTML =
+          '<span class="status-icon-3d ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg></span><span>Dashboard berhasil diperbarui dari Supabase.</span>';
       }
 
     } catch (error) {
       if (statusEl) {
         statusEl.className = "status-box";
-        statusEl.textContent = "❌ Dashboard gagal dimuat: " + (error.message || error);
+        statusEl.innerHTML = '<span class="status-icon-3d error" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 7v6"/><path d="M12 17h.01"/></svg></span><span>Dashboard gagal dimuat: ' + (error.message || error) + '</span>';
       }
 
       console.error("loadDashboard Supabase:", error);
