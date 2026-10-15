@@ -6602,6 +6602,68 @@ if ("serviceWorker" in navigator) {
 /* Kolom ID hanya disembunyikan secara visual; nilai data tidak dihapus. */
 </style>
 
+
+<style id="sidang-jaya-final-theme-responsive-fix">
+/* Tema final: navy + teal + emas, seragam di seluruh aplikasi */
+:root{
+  --primary:#17465d !important;
+  --primary-dark:#102f45 !important;
+  --bg:#f1f5f8 !important;
+  --card:#ffffff !important;
+  --text:#173042 !important;
+  --muted:#617583 !important;
+  --border:#d8e2e9 !important;
+  --success:#176b68 !important;
+  --warning:#a66a16 !important;
+  --danger:#a6323b !important;
+}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app{width:100%;max-width:100%;min-width:0}
+.main{min-width:0;max-width:100%;width:calc(100% - 240px);overflow-x:hidden}
+.page,.panel,.grid-2,.cards{min-width:0;max-width:100%}
+.cards{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:16px}
+.card{min-width:0;max-width:100%;overflow:hidden;background:linear-gradient(145deg,#fff,#f7fafc) !important;border:1px solid #d8e2e9 !important;box-shadow:0 5px 16px rgba(16,47,69,.07),inset 0 1px 0 rgba(255,255,255,.95);border-radius:16px}
+.card .metric-label{color:#36566a !important}
+.card .metric-value{color:#123d55 !important;font-size:clamp(20px,1.9vw,30px);overflow-wrap:anywhere;word-break:break-word}
+/* Jangan biarkan kartu Saldo Kas tetap hijau seperti tema lama. */
+#page-dashboard .cards .card:first-child{background:linear-gradient(145deg,#17465d,#102f45) !important;border-color:#123d55 !important}
+#page-dashboard .cards .card:first-child .metric-label,
+#page-dashboard .cards .card:first-child .metric-value{color:#fff !important}
+.topbar{max-width:100%;min-width:0;background:linear-gradient(135deg,#fff,#f3f8fa) !important;border-color:#d5e1e8 !important}
+.topbar h1{color:#123d55 !important}
+.sidebar{background:linear-gradient(180deg,#17465d 0%,#102f45 100%) !important}
+.nav button.active{background:linear-gradient(135deg,rgba(45,126,150,.42),rgba(255,255,255,.07)) !important;border-color:rgba(242,210,139,.32) !important}
+.btn-primary,.bumdes-login-submit{background:linear-gradient(135deg,#247b91,#123d55) !important;color:#fff !important}
+.btn-secondary{background:#eaf2f5 !important;color:#17465d !important}
+.connection{color:#176b68 !important}
+.connection.ok{background:#edf8f5 !important;border-color:#b9dcd5 !important}
+.panel .section-title{color:#17465d !important}
+.panel .section-title::before{background:linear-gradient(145deg,#2b8794,#17465d) !important}
+th{background:#edf3f6 !important;color:#173d52 !important}
+.table-wrap,.history-table-wrap{max-width:100%;min-width:0;overflow-x:auto}
+.table-wrap table{max-width:100%}
+input,select,textarea{max-width:100%}
+@media(max-width:1200px){
+ .cards{grid-template-columns:repeat(3,minmax(0,1fr)) !important}
+ .main{padding:22px}
+}
+@media(max-width:900px){
+ .cards{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+ .main{width:100%;margin-left:0;min-width:0;padding:16px 12px 24px}
+ .topbar{flex-wrap:wrap}
+}
+@media(max-width:700px){
+ .cards,#page-kas .cards{grid-template-columns:1fr !important}
+ .main{width:100%;max-width:100%;padding:14px 10px 24px;overflow-x:hidden}
+ .topbar{padding:14px 13px 15px;gap:10px}
+ .topbar h1{font-size:22px;overflow-wrap:anywhere}
+ .panel{padding:12px}
+ .card .metric-value{font-size:24px}
+ .interactive-table-controls{flex-wrap:wrap;justify-content:flex-start}
+ .interactive-pagination{justify-content:flex-start}
+}
+</style>
+
 <script id="hide-id-columns-script">
 (function(){
   // Sembunyikan kolom teknis ID pada tabel tampilan tanpa menghapus data dari database.
@@ -6611,8 +6673,8 @@ if ("serviceWorker" in navigator) {
       if(!headerRows.length) return;
       const headerCells = Array.from(headerRows[headerRows.length - 1].children);
       headerCells.forEach(function(th, index){
-        const label = (th.textContent || '').trim().replace(/\\s+/g, ' ');
-        if(/^id(?:\\s|$)/i.test(label) || /^id\\s*(barang|kas|transaksi|penjualan|pengeluaran|referensi)/i.test(label)){
+        const label = (th.textContent || '').trim().replace(/\s+/g, ' ');
+        if(/^id(?:\s|$)/i.test(label) || /^id\s*(barang|kas|transaksi|penjualan|pengeluaran|referensi)/i.test(label)){
           th.style.display = 'none';
           table.querySelectorAll('tbody tr').forEach(function(row){
             if(row.children[index]) row.children[index].style.display = 'none';
