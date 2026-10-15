@@ -1932,6 +1932,98 @@ th.interactive-sort-active .interactive-sort-icon{
   }
 </style>
 
+
+<style id="sidang-jaya-unified-premium-theme">
+/* Tema terpadu: warna aplikasi mengikuti halaman login (navy, biru-teal, emas). */
+:root{
+  --primary:#17465d;
+  --primary-dark:#102f45;
+  --bg:#f3f6f8;
+  --card:#ffffff;
+  --text:#1f2937;
+  --muted:#667784;
+  --border:#dfe7ec;
+  --danger:#b84035;
+  --success:#20745b;
+  --warning:#a97820;
+}
+body{background:var(--bg);}
+/* Login lebih teratur, responsif, dan konsisten dengan aplikasi. */
+.bumdes-login-gate{
+  background:
+    radial-gradient(circle at 12% 8%,rgba(242,210,139,.20),transparent 29%),
+    radial-gradient(circle at 92% 92%,rgba(48,133,160,.22),transparent 31%),
+    linear-gradient(135deg,#102f45 0%,#17465d 53%,#102f45 100%);
+}
+.bumdes-login-shell{width:min(460px,100%);}
+.bumdes-login-logos{gap:16px;margin-bottom:20px;}
+.login-logo{
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 10px 24px rgba(0,0,0,.20),inset 0 1px 0 #fff;
+}
+.bumdes-login-eyebrow{letter-spacing:1.8px;}
+.bumdes-login-shell h1{letter-spacing:-.5px;text-shadow:0 2px 12px rgba(0,0,0,.12);}
+.bumdes-login-subtitle{line-height:1.55;}
+.bumdes-login-card{
+  padding:30px;
+  border:1px solid rgba(255,255,255,.68);
+  border-radius:22px;
+  box-shadow:0 24px 60px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.9);
+}
+.bumdes-login-card h2{color:#17465d;letter-spacing:-.3px;}
+.bumdes-login-card input{
+  min-height:47px;border-color:#d8e2e8;background:#f9fbfc;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+.bumdes-login-card input:focus{border-color:#287d9d;box-shadow:0 0 0 4px rgba(40,125,157,.12);background:#fff;}
+.bumdes-login-submit{
+  min-height:49px;background:linear-gradient(135deg,#287d9d 0%,#17465d 58%,#102f45 100%);
+  border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 18px rgba(16,47,69,.24),inset 0 1px 0 rgba(255,255,255,.18);
+  transition:transform .18s,filter .18s,box-shadow .18s;
+}
+.bumdes-login-submit:hover{transform:translateY(-1px);box-shadow:0 11px 22px rgba(16,47,69,.28);}
+#bumdesPasswordToggle{background:#eaf2f6;color:#17465d;}
+/* Sidebar dan komponen utama memakai palet login. */
+.sidebar{background:linear-gradient(180deg,#17465d 0%,#12394f 58%,#102f45 100%);box-shadow:5px 0 22px rgba(16,47,69,.10);}
+.nav button:hover,.nav button.active{
+  background:linear-gradient(135deg,rgba(255,255,255,.17),rgba(255,255,255,.06));
+  border-color:rgba(242,210,139,.18);
+}
+.nav button.active::before{background:#f2d28b;box-shadow:0 0 9px rgba(242,210,139,.45);}
+.nav button.active .nav-icon{background:linear-gradient(145deg,rgba(242,210,139,.27),rgba(255,255,255,.07));border-color:rgba(242,210,139,.35);}
+.nav button.active .nav-icon svg{stroke:#f8dfa5;}
+.btn-primary{background:linear-gradient(135deg,#287d9d,#17465d);color:#fff;box-shadow:0 5px 12px rgba(23,70,93,.14);}
+.btn-primary:hover{background:linear-gradient(135deg,#216d8a,#102f45);}
+.mobile-menu{background:#17465d;}
+.topbar{border-color:rgba(23,70,93,.12);box-shadow:0 12px 28px rgba(16,47,69,.07),inset 0 1px 0 rgba(255,255,255,.95);}
+.topbar::before{background:linear-gradient(180deg,#f2d28b,#287d9d,#17465d);}
+.topbar h1{color:#153b50;}
+.topbar p::before{background:#f2d28b;box-shadow:0 1px 3px rgba(0,0,0,.15),0 0 0 3px rgba(242,210,139,.18);}
+.connection{border-color:#cbdde6;background:linear-gradient(145deg,#fff,#eef5f8);color:#17465d;}
+.connection.ok{border-color:#c2dfd1;background:linear-gradient(145deg,#fff,#eff8f3);color:#20745b;}
+.connection::before{background:linear-gradient(145deg,#3289a7,#17465d);}
+.panel .section-title{color:#153b50;}
+.panel .section-title::before{background:linear-gradient(145deg,#3289a7,#17465d);}
+#dashboardInventorySummary,#dashboardStatus{border-color:#d8e5eb;background:linear-gradient(145deg,#fbfdfe,#f0f6f8);}
+.summary-icon-3d,.status-icon-3d{background:linear-gradient(145deg,#3289a7,#17465d);}
+.interactive-pagination button{color:#17465d;}
+.interactive-pagination button.active{background:#17465d;border-color:#17465d;color:#fff;}
+.interactive-pagination button:hover:not(:disabled){background:#eef5f8;border-color:#cbdde6;}
+input:focus,select:focus,textarea:focus{border-color:#287d9d;box-shadow:0 0 0 3px rgba(40,125,157,.10);}
+.table-wrap th,.history-table-wrap th{background:#f1f6f8;}
+.table-wrap th.interactive-sortable:hover,.history-table-wrap th.interactive-sortable:hover{background:#e8f1f5;}
+th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
+.sales-product-option:hover{background:#f0f7fa;}
+.sales-product-info.selected{color:#20745b;}
+@media(max-width:480px){
+  .bumdes-login-gate{padding:18px 13px;}
+  .bumdes-login-shell{max-width:400px;}
+  .bumdes-login-logos{gap:8px;margin-bottom:17px;}
+  .bumdes-login-card{padding:22px 18px;border-radius:18px;}
+  .bumdes-login-shell h1{font-size:clamp(27px,7vw,34px);}
+}
+</style>
+
 </head>
 
 
@@ -6471,6 +6563,44 @@ if ("serviceWorker" in navigator) {
 </script>
 
 
+
+
+<style id="mobile-table-readability-fix">
+/* Perbaikan tabel di layar kecil: data tetap utuh, tabel digeser di dalam pembungkusnya. */
+@media (max-width:700px) {
+  .table-wrap {
+    width:100%;
+    max-width:100%;
+    overflow-x:auto !important;
+    overflow-y:hidden;
+    touch-action:pan-x pan-y;
+    scrollbar-width:thin;
+  }
+  .table-wrap > table {
+    width:max-content;
+    min-width:680px;
+    table-layout:auto;
+  }
+  /* Tabel Master Barang: kurangi lebar berlebih, tetap bisa digeser untuk kolom lanjutan. */
+  #masterBarangTableBody {
+    white-space:nowrap;
+  }
+  #masterBarangTableBody td:nth-child(2) {
+    min-width:135px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  /* Kontrol pencarian dan ringkasan tidak membuat halaman melebar. */
+  #masterBarangSearch {
+    width:100%;
+    max-width:100%;
+  }
+  .table-toolbar .help {
+    overflow-wrap:anywhere;
+  }
+}
+/* Kolom ID hanya disembunyikan secara visual; nilai data tidak dihapus. */
+</style>
 
 <script id="hide-id-columns-script">
 (function(){
