@@ -2834,10 +2834,9 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
                 <input id="masterSatuan" placeholder="Contoh: Sak" required>
               </div>
               <div>
-                <label for="masterHargaBeli">Harga Beli Awal</label>
-                <!-- <input id="masterHargaBeli" type="number" min="0" step="1" placeholder="Contoh: 100000" required> -->
+                <label for="masterHargaBeli">Harga Beli Terakhir</label>
                 <input id="masterHargaBeli" type="text" inputmode="numeric" placeholder="Contoh: Rp10.000" required oninput="formatHargaInput(this)">
-                <div class="help">Harga beli awal dapat diedit. HPP rata-rata akan dihitung ulang berdasarkan stok awal dan riwayat barang masuk.</div>
+                <div class="help">Saat edit, harga ini mengikuti harga beli terakhir pada data barang. HPP awal tetap disimpan terpisah agar perhitungan HPP rata-rata dan penghapusan transaksi tetap akurat.</div>
               </div>
               <div>
                 <label for="masterHargaJual">Harga Jual</label>
@@ -4293,11 +4292,12 @@ function ambilAngkaHarga(value) {
     document.getElementById("masterNamaBarang").value = item.namaBarang || "";
     document.getElementById("masterKategori").value = item.kategori || "";
     document.getElementById("masterSatuan").value = item.satuan || "";
-    // document.getElementById("masterHargaBeli").value = Number(item.hargaBeliTerakhir) || 0;
+    // Form edit menampilkan harga beli terakhir seperti kolom pada tabel.
+    // hppAwal tetap dipertahankan terpisah untuk perhitungan HPP.
     document.getElementById("masterHargaBeli").value =
-  (item.hppAwal || item.hargaBeliTerakhir)
-    ? "Rp" + Number(item.hppAwal || item.hargaBeliTerakhir).toLocaleString("id-ID")
-    : "";
+      item.hargaBeliTerakhir
+        ? "Rp" + Number(item.hargaBeliTerakhir).toLocaleString("id-ID")
+        : "";
     // document.getElementById("masterHargaJual").value = Number(item.hargaJual) || 0;
     document.getElementById("masterHargaJual").value =
   item.hargaJual
@@ -4403,9 +4403,9 @@ function ambilAngkaHarga(value) {
             nama_barang: namaBarang,
             kategori: kategori,
             satuan: satuan,
-            hpp_awal: hargaBeli,
-            harga_beli_terakhir: hargaBeli,
-            hpp_rata_rata: hargaBeli,
+            // Jangan menimpa hpp_awal atau hpp_rata_rata di sini.
+            // Harga beli terakhir disinkronkan dari riwayat Barang Masuk
+            // oleh rebuildStockForItem() di bawah.
             harga_jual: hargaJual,
             stok_minimum: stokMinimum,
             status: status,
