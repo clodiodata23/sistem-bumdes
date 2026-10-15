@@ -2140,6 +2140,11 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
         <span class="nav-label">Laporan</span>
       </button>
 
+      <button type="button" class="nav-reset" onclick="backupSemuaData()">
+        <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg></span>
+        <span class="nav-label">Backup Data</span>
+      </button>
+
       <button type="button" onclick="resetSemuaData()">
         <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg></span>
         <span class="nav-label">Reset Semua Data</span>
@@ -2832,7 +2837,7 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
                 <label for="masterHargaBeli">Harga Beli Awal</label>
                 <!-- <input id="masterHargaBeli" type="number" min="0" step="1" placeholder="Contoh: 100000" required> -->
                 <input id="masterHargaBeli" type="text" inputmode="numeric" placeholder="Contoh: Rp10.000" required oninput="formatHargaInput(this)">
-                <div class="help">Saat edit, harga beli/HPP tidak diubah agar riwayat HPP tetap aman.</div>
+                <div class="help">Harga beli awal dapat diedit. HPP rata-rata akan dihitung ulang berdasarkan stok awal dan riwayat barang masuk.</div>
               </div>
               <div>
                 <label for="masterHargaJual">Harga Jual</label>
@@ -4164,7 +4169,7 @@ function ambilAngkaHarga(value) {
   if (result) { result.className = "result"; result.textContent = ""; }
   try {
     const [{ data: masterData, error: masterError }, { data: stokRows, error: stokError }] = await Promise.all([
-      supabaseClient.from("master_barang").select("id_barang,nama_barang,kategori,satuan,harga_beli_terakhir,hpp_rata_rata,harga_jual,stok_minimum,status,aktif").order("id_barang", { ascending: true }),
+      supabaseClient.from("master_barang").select("id_barang,nama_barang,kategori,satuan,harga_beli_terakhir,hpp_rata_rata,hpp_awal,harga_jual,stok_minimum,status,aktif").order("id_barang", { ascending: true }),
       supabaseClient.from("stok").select("id_barang,nama_barang,stok_awal,barang_masuk,terjual,stok_akhir,stok_minimum,status")
     ]);
     if (masterError) throw masterError;
@@ -4174,7 +4179,7 @@ function ambilAngkaHarga(value) {
       const stok = stokMap.get(String(item.id_barang));
       return {
         idBarang: item.id_barang, namaBarang: item.nama_barang, kategori: item.kategori, satuan: item.satuan,
-        hargaBeliTerakhir: Number(item.harga_beli_terakhir) || 0, hppRataRata: Number(item.hpp_rata_rata) || 0,
+        hargaBeliTerakhir: Number(item.harga_beli_terakhir) || 0, hppAwal: Number(item.hpp_awal ?? item.harga_beli_terakhir ?? item.hpp_rata_rata) || 0, hppRataRata: Number(item.hpp_rata_rata) || 0,
         hargaJual: Number(item.harga_jual) || 0, stokAwal: stok ? Number(stok.stok_awal) || 0 : 0,
         barangMasuk: stok ? Number(stok.barang_masuk) || 0 : 0, terjual: stok ? Number(stok.terjual) || 0 : 0,
         stokAkhir: stok ? Number(stok.stok_akhir) || 0 : 0,
@@ -4290,8 +4295,8 @@ function ambilAngkaHarga(value) {
     document.getElementById("masterSatuan").value = item.satuan || "";
     // document.getElementById("masterHargaBeli").value = Number(item.hargaBeliTerakhir) || 0;
     document.getElementById("masterHargaBeli").value =
-  item.hargaBeliTerakhir
-    ? "Rp" + Number(item.hargaBeliTerakhir).toLocaleString("id-ID")
+  (item.hppAwal || item.hargaBeliTerakhir)
+    ? "Rp" + Number(item.hppAwal || item.hargaBeliTerakhir).toLocaleString("id-ID")
     : "";
     // document.getElementById("masterHargaJual").value = Number(item.hargaJual) || 0;
     document.getElementById("masterHargaJual").value =
@@ -4303,7 +4308,7 @@ function ambilAngkaHarga(value) {
     document.getElementById("masterAktif").value = item.aktif !== false ? "true" : "false";
 
     document.getElementById("masterIdBarang").disabled = true;
-    document.getElementById("masterHargaBeli").disabled = true;
+    document.getElementById("masterHargaBeli").disabled = false;
     document.getElementById("masterStokAwal").disabled = false;
     document.getElementById("masterAktifField").style.display = "block";
     document.getElementById("masterFormTitle").textContent = "Edit Barang";
@@ -4398,6 +4403,9 @@ function ambilAngkaHarga(value) {
             nama_barang: namaBarang,
             kategori: kategori,
             satuan: satuan,
+            hpp_awal: hargaBeli,
+            harga_beli_terakhir: hargaBeli,
+            hpp_rata_rata: hargaBeli,
             harga_jual: hargaJual,
             stok_minimum: stokMinimum,
             status: status,
@@ -4446,6 +4454,9 @@ function ambilAngkaHarga(value) {
         });
         if (errorInsertStok) throw errorInsertStok;
       }
+
+      // Hitung ulang HPP dari HPP awal permanen dan transaksi pembelian yang masih ada.
+      await rebuildStockForItem(editId);
 
       // --------------------------------------------------------
       // 3. BERHASIL EDIT
@@ -4520,6 +4531,7 @@ function ambilAngkaHarga(value) {
           kategori: kategori,
           satuan: satuan,
           harga_beli_terakhir: hargaBeli,
+          hpp_awal: hargaBeli,
           hpp_rata_rata: hargaBeli,
           harga_jual: hargaJual,
           stok_minimum: stokMinimum,
@@ -5667,7 +5679,7 @@ function ambilAngkaHarga(value) {
   async function rebuildStockForItem(idBarang) {
     const [{data: stok,error: stokError},{data: master,error: masterError},{data: purchases,error: pError},{data: sales,error: sError}] = await Promise.all([
       supabaseClient.from("stok").select("id_barang,nama_barang,stok_awal,stok_minimum").eq("id_barang",idBarang).maybeSingle(),
-      supabaseClient.from("master_barang").select("id_barang,hpp_rata_rata,harga_beli_terakhir,harga_jual,aktif").eq("id_barang",idBarang).maybeSingle(),
+      supabaseClient.from("master_barang").select("id_barang,hpp_rata_rata,harga_beli_terakhir,hpp_awal,harga_jual,aktif").eq("id_barang",idBarang).maybeSingle(),
       supabaseClient.from("barang_masuk").select("qty,harga_beli").eq("id_barang",idBarang),
       supabaseClient.from("penjualan").select("qty").eq("id_barang",idBarang)
     ]);
@@ -5680,12 +5692,10 @@ function ambilAngkaHarga(value) {
     const min = Number(stok.stok_minimum)||0;
     const status = stokAkhir <= 0 ? "HABIS" : (stokAkhir <= min ? "MENIPIS" : "AMAN");
 
-    // Hitung HPP rata-rata dari stok awal + histori pembelian.
-    // Harga HPP awal dipulihkan dari HPP saat ini sebelum perubahan agar histori tetap konsisten.
-    let hppAwal = Number(master.hpp_rata_rata)||Number(master.harga_beli_terakhir)||0;
-    const totalPurchaseQtyBefore = masuk;
-    if (stokAwal > 0 && totalPurchaseQtyBefore > 0 && Number(master.hpp_rata_rata) > 0) {
-      const nilaiPembelian = (purchases || []).reduce((n,x)=>n+(Number(x.qty)||0)*(Number(x.harga_beli)||0),0);
+    // HPP awal disimpan terpisah agar penghapusan/edit barang masuk
+    // tidak menebak-nebak nilai awal dari HPP rata-rata yang sudah berubah.
+    const hppAwal = Number(master.hpp_awal ?? master.harga_beli_terakhir ?? master.hpp_rata_rata) || 0;
+    const nilaiPembelian = (purchases || []).reduce((n,x)=>n+(Number(x.qty)||0)*(Number(x.harga_beli)||0),0);
       const derived = ((Number(master.hpp_rata_rata) * (stokAwal + totalPurchaseQtyBefore)) - nilaiPembelian) / stokAwal;
       if (Number.isFinite(derived) && derived >= 0) hppAwal = derived;
     }
@@ -5871,6 +5881,94 @@ if ("serviceWorker" in navigator) {
     // ============================================================
     // RESET SEMUA DATA BUMDes
     // ============================================================
+
+    // ============================================================
+    // BACKUP DATA BUMDes SIDANG JAYA (JSON)
+    // Hanya Admin; mengambil semua halaman agar tidak terpotong limit API.
+    // ============================================================
+    async function backupSemuaData() {
+      if (String(window.bumdesCurrentRole || '').toLowerCase() !== 'admin') {
+        alert('Fitur backup hanya tersedia untuk Admin.');
+        return;
+      }
+
+      const tables = [
+        'master_barang',
+        'stok',
+        'penjualan',
+        'barang_masuk',
+        'pengeluaran',
+        'kas'
+      ];
+
+      if (!confirm(
+        'Buat backup seluruh data BUMDes sekarang?\\n\\n' +
+        'Backup akan diunduh sebagai file JSON yang berisi Master Barang, Stok, Penjualan, Barang Masuk, Pengeluaran, dan Kas.\\n\\n' +
+        'Simpan file di tempat yang aman.'
+      )) return;
+
+      const btn = document.querySelector('.nav button[onclick="backupSemuaData()"]');
+      const oldText = btn ? btn.innerText : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '.65';
+      }
+
+      try {
+        const backup = {
+          aplikasi: 'Sistem BUMDes Sidang Jaya',
+          format_backup: 1,
+          dibuat_pada: new Date().toISOString(),
+          dibuat_oleh: (window.bumdesCurrentUserEmail || ''),
+          sumber: 'Supabase',
+          tabel: {}
+        };
+
+        for (const table of tables) {
+          let rows = [];
+          const pageSize = 1000;
+          for (let start = 0; ; start += pageSize) {
+            const { data, error } = await supabaseClient
+              .from(table)
+              .select('*')
+              .range(start, start + pageSize - 1);
+
+            if (error) throw new Error('Gagal mengambil tabel "' + table + '": ' + error.message);
+            const batch = data || [];
+            rows = rows.concat(batch);
+            if (batch.length < pageSize) break;
+          }
+          backup.tabel[table] = {
+            jumlah_data: rows.length,
+            data: rows
+          };
+        }
+
+        const json = JSON.stringify(backup, null, 2);
+        const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        a.href = url;
+        a.download = 'backup-bumdes-sidang-jaya-' + stamp + '.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+        const summary = tables.map(t => t + ': ' + backup.tabel[t].jumlah_data).join('\\n');
+        alert('Backup berhasil diunduh.\\n\\n' + summary + '\\n\\nSimpan file ini di tempat aman. Fitur ini membuat salinan; tidak mengubah data Supabase.');
+      } catch (err) {
+        console.error('Backup BUMDes gagal:', err);
+        alert('Backup gagal: ' + (err && err.message ? err.message : String(err)) +
+          '\\n\\nPeriksa izin SELECT untuk akun Admin pada semua tabel.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '';
+        }
+      }
+    }
 
     async function resetSemuaData() {
 
@@ -6477,6 +6575,7 @@ if ("serviceWorker" in navigator) {
     gate.hidden=true;
     window.bumdesCurrentUser=user;
     window.bumdesCurrentRole=role;
+    window.bumdesCurrentUserEmail=(user&&user.email)||'';
     const userBar=document.getElementById('bumdesUserBar');
     const userBadge=document.getElementById('bumdesUserBadge');
     if(userBar) userBar.style.display='flex';
