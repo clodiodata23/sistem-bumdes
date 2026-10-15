@@ -5690,7 +5690,7 @@ function ambilAngkaHarga(value) {
     const [{data: stok,error: stokError},{data: master,error: masterError},{data: purchases,error: pError},{data: sales,error: sError}] = await Promise.all([
       supabaseClient.from("stok").select("id_barang,nama_barang,stok_awal,stok_minimum").eq("id_barang",idBarang).maybeSingle(),
       supabaseClient.from("master_barang").select("id_barang,hpp_rata_rata,harga_beli_terakhir,hpp_awal,harga_jual,aktif").eq("id_barang",idBarang).maybeSingle(),
-      supabaseClient.from("barang_masuk").select("qty,harga_beli").eq("id_barang",idBarang),
+      supabaseClient.from("barang_masuk").select("id_pembelian,tanggal,qty,harga_beli").eq("id_barang",idBarang).order("tanggal", {ascending:true}).order("id_pembelian", {ascending:true}),
       supabaseClient.from("penjualan").select("qty").eq("id_barang",idBarang)
     ]);
     if (stokError) throw stokError; if (masterError) throw masterError; if (pError) throw pError; if (sError) throw sError;
@@ -5707,13 +5707,28 @@ function ambilAngkaHarga(value) {
     // Gunakan HPP awal yang tersimpan sebagai dasar tetap.
     // Jangan menurunkan HPP awal dari HPP rata-rata yang sudah berubah.
     const hppAwal = Number(master.hpp_awal ?? master.harga_beli_terakhir ?? master.hpp_rata_rata) || 0;
-    const nilaiPembelian = (purchases || []).reduce(
-      (n, x) => n + (Number(x.qty) || 0) * (Number(x.harga_beli) || 0),
-      0
-    );
-    const nilaiAwal = stokAwal * hppAwal;
-    const hppBaru = (stokAwal + masuk) > 0 ? Math.round((nilaiAwal + nilaiPembelian) / (stokAwal + masuk)) : 0;
-    const hargaTerakhir = purchases && purchases.length ? Number(purchases[purchases.length-1].harga_beli)||0 : hppAwal;
+
+    // Hitung HPP tertimbang dari stok awal dan seluruh transaksi barang masuk
+    // yang masih tersimpan. Urutan transaksi tidak mengubah rata-rata, tetapi
+    // diperlukan agar harga beli terakhir selalu diambil dari transaksi terbaru.
+    const nilaiPembelian = (purchases || []).reduce((total, pembelian) => {
+      const qtyPembelian = Number(pembelian.qty) || 0;
+      const hargaPembelian = Number(pembelian.harga_beli) || 0;
+      return total + (qtyPembelian * hargaPembelian);
+    }, 0);
+
+    const jumlahPersediaanAwalDanMasuk = stokAwal + masuk;
+    const nilaiPersediaanAwalDanMasuk = (stokAwal * hppAwal) + nilaiPembelian;
+    const hppBaru = jumlahPersediaanAwalDanMasuk > 0
+      ? Math.round(nilaiPersediaanAwalDanMasuk / jumlahPersediaanAwalDanMasuk)
+      : 0;
+
+    const transaksiPembelianTerbaru = purchases && purchases.length
+      ? purchases[purchases.length - 1]
+      : null;
+    const hargaTerakhir = transaksiPembelianTerbaru
+      ? (Number(transaksiPembelianTerbaru.harga_beli) || 0)
+      : hppAwal;
 
     const {error: stockUpdateError} = await supabaseClient.from("stok").update({barang_masuk:masuk,terjual,stok_akhir:stokAkhir,status}).eq("id_barang",idBarang);
     if (stockUpdateError) throw stockUpdateError;
