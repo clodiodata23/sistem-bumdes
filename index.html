@@ -2632,9 +2632,16 @@ th.interactive-sort-active .interactive-sort-icon{
 
           <input id="stockSearch" type="search"
 
-                 placeholder="Cari ID atau nama barang..."
+                 placeholder="Cari nama barang..."
 
                  oninput="filterStok()">
+
+          <select id="stockStatusFilter" aria-label="Filter status stok" onchange="filterStok()" style="max-width:190px;">
+            <option value="SEMUA">Semua Status</option>
+            <option value="AMAN">Aman</option>
+            <option value="MENIPIS">Menipis</option>
+            <option value="HABIS">Kosong</option>
+          </select>
 
           <div class="help" id="stockSummary">Memuat data stok...</div>
 
@@ -4725,37 +4732,22 @@ function ambilAngkaHarga(value) {
 
 
 
-  function filterStok() {
+  function getFilteredStokData() {
+    const keyword = (document.getElementById("stockSearch")?.value || "").trim().toLowerCase();
+    const selectedStatus = document.getElementById("stockStatusFilter")?.value || "SEMUA";
 
-    const keyword = document.getElementById("stockSearch").value.trim().toLowerCase();
-
-
-
-    if (!keyword) {
-
-      renderStok(stokData);
-
-      return;
-
-    }
-
-
-
-    const filtered = stokData.filter(item =>
-
-      String(item.idBarang || "").toLowerCase().includes(keyword) ||
-
-      String(item.namaBarang || "").toLowerCase().includes(keyword)
-
-    );
-
-
-
-    renderStok(filtered);
-
+    return (Array.isArray(stokData) ? stokData : []).filter(item => {
+      const cocokKata = !keyword ||
+        String(item.idBarang || "").toLowerCase().includes(keyword) ||
+        String(item.namaBarang || "").toLowerCase().includes(keyword);
+      const cocokStatus = selectedStatus === "SEMUA" || String(item.status || "").toUpperCase() === selectedStatus;
+      return cocokKata && cocokStatus;
+    });
   }
 
-
+  function filterStok() {
+    renderStok(getFilteredStokData());
+  }
 
   function downloadStokPDF() {
     if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -4763,7 +4755,9 @@ function ambilAngkaHarga(value) {
       return;
     }
 
-    if (!Array.isArray(stokData) || !stokData.length) {
+    const dataLaporan = getFilteredStokData();
+
+    if (!dataLaporan.length) {
       alert("Data stok belum tersedia. Klik Refresh Stok terlebih dahulu.");
       return;
     }
@@ -4773,9 +4767,9 @@ function ambilAngkaHarga(value) {
     const margin = 12;
     let y = 14;
 
-    const aman = stokData.filter(x => String(x.status || "") === "AMAN").length;
-    const menipis = stokData.filter(x => String(x.status || "") === "MENIPIS").length;
-    const habis = stokData.filter(x => String(x.status || "") === "HABIS").length;
+    const aman = dataLaporan.filter(x => String(x.status || "") === "AMAN").length;
+    const menipis = dataLaporan.filter(x => String(x.status || "") === "MENIPIS").length;
+    const habis = dataLaporan.filter(x => String(x.status || "") === "HABIS").length;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(17);
@@ -4804,6 +4798,13 @@ function ambilAngkaHarga(value) {
     doc.text("Tanggal Laporan", margin, y);
     doc.setFont("helvetica", "normal");
     doc.text(formatLaporanDate(tanggalHariIniISO()), margin + 35, y);
+    y += 6;
+    const statusTerpilih = document.getElementById("stockStatusFilter")?.value || "SEMUA";
+    const labelStatus = statusTerpilih === "HABIS" ? "KOSONG" : statusTerpilih;
+    doc.setFont("helvetica", "bold");
+    doc.text("Filter Status", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(labelStatus === "SEMUA" ? "Semua Status" : labelStatus, margin + 35, y);
     y += 8;
 
     doc.setFont("helvetica", "bold");
@@ -4815,7 +4816,7 @@ function ambilAngkaHarga(value) {
       startY: y,
       head: [["Total Jenis Barang", "Stok Aman", "Stok Menipis", "Stok Habis"]],
       body: [[
-        formatNumber(stokData.length),
+        formatNumber(dataLaporan.length),
         formatNumber(aman),
         formatNumber(menipis),
         formatNumber(habis)
@@ -4833,7 +4834,7 @@ function ambilAngkaHarga(value) {
     doc.text("Daftar Stok Barang", margin, y);
     y += 2;
 
-    const rows = stokData.map(item => [
+    const rows = dataLaporan.map(item => [
       String(item.idBarang || "-"),
       String(item.namaBarang || "-"),
       formatNumber(item.stokAwal),
@@ -6466,6 +6467,37 @@ if ("serviceWorker" in navigator) {
       showLogin('Anda sudah keluar dari aplikasi.');
     });
   }
+})();
+</script>
+
+
+
+<script id="hide-id-columns-script">
+(function(){
+  // Sembunyikan kolom teknis ID pada tabel tampilan tanpa menghapus data dari database.
+  function hideIdColumns(root){
+    (root || document).querySelectorAll('table').forEach(function(table){
+      const headerRows = table.querySelectorAll('thead tr');
+      if(!headerRows.length) return;
+      const headerCells = Array.from(headerRows[headerRows.length - 1].children);
+      headerCells.forEach(function(th, index){
+        const label = (th.textContent || '').trim().replace(/\\s+/g, ' ');
+        if(/^id(?:\\s|$)/i.test(label) || /^id\\s*(barang|kas|transaksi|penjualan|pengeluaran|referensi)/i.test(label)){
+          th.style.display = 'none';
+          table.querySelectorAll('tbody tr').forEach(function(row){
+            if(row.children[index]) row.children[index].style.display = 'none';
+          });
+          table.querySelectorAll('tfoot tr').forEach(function(row){
+            if(row.children[index]) row.children[index].style.display = 'none';
+          });
+        }
+      });
+    });
+  }
+  hideIdColumns(document);
+  const observer = new MutationObserver(function(){ hideIdColumns(document); });
+  observer.observe(document.body, {childList:true, subtree:true});
+  window.hideBUMDesIdColumns = hideIdColumns;
 })();
 </script>
 
