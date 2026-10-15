@@ -6693,6 +6693,52 @@ input,select,textarea{max-width:100%}
 })();
 </script>
 
+
+<style id="verified-id-theme-fix-v2">
+/* FIX DEFINITIF: kolom teknis ID pada tabel riwayat disembunyikan di header DAN isi */
+#page-penjualan .history-table thead th:first-child,
+#page-penjualan #salesHistoryBody > tr > td:first-child,
+#page-pembelian .history-table thead th:first-child,
+#page-pembelian #purchaseHistoryBody > tr > td:first-child,
+#page-pengeluaran .history-table thead th:first-child,
+#page-pengeluaran #expenseHistoryBody > tr > td:first-child {
+  display:none !important;
+}
+/* Tabel stok dan master barang: sembunyikan kolom pertama jika judulnya ID */
+#page-stok table thead th:first-child,
+#page-stok #stockTableBody > tr > td:first-child,
+#page-master-barang table thead th:first-child,
+#page-master-barang #masterBarangTableBody > tr > td:first-child {
+  display:none !important;
+}
+/* Pastikan kartu dashboard tidak menyisakan kartu hijau dari tema lama */
+#page-dashboard .cards > .card,
+#page-dashboard .cards > .card:first-child {
+  background:linear-gradient(145deg,#ffffff,#f3f8fa) !important;
+  border:1px solid #d8e2e9 !important;
+  color:#173042 !important;
+  box-shadow:0 5px 16px rgba(16,47,69,.07),inset 0 1px 0 rgba(255,255,255,.95) !important;
+}
+#page-dashboard .cards > .card .metric-label,
+#page-dashboard .cards > .card:first-child .metric-label { color:#36566a !important; }
+#page-dashboard .cards > .card .metric-value,
+#page-dashboard .cards > .card:first-child .metric-value { color:#123d55 !important; }
+/* Tema login diaplikasikan konsisten pada tombol, panel, tabel dan kontrol */
+:root { --primary:#17465d !important; --primary-dark:#102f45 !important; }
+.btn-primary, .bumdes-login-submit { background:linear-gradient(135deg,#247b91,#123d55) !important; color:#fff !important; }
+.nav button.active { background:linear-gradient(135deg,rgba(45,126,150,.42),rgba(255,255,255,.07)) !important; }
+th { background:#edf3f6 !important; color:#173d52 !important; }
+.panel, .card, .history-table-wrap, .table-wrap { border-color:#d8e2e9 !important; }
+/* Tidak ada halaman yang boleh melebar melebihi viewport; tabelnya sendiri tetap bisa digeser */
+html, body { max-width:100%; overflow-x:hidden; }
+.app, .main, .page, .panel { min-width:0; }
+.main { box-sizing:border-box; }
+.table-wrap, .history-table-wrap { width:100%; max-width:100%; overflow-x:auto; }
+@media (max-width:900px) {
+  .main { width:100% !important; margin-left:0 !important; }
+}
+</style>
+
 </body>
 
 </html>
