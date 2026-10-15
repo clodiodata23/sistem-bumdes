@@ -4403,9 +4403,10 @@ function ambilAngkaHarga(value) {
             nama_barang: namaBarang,
             kategori: kategori,
             satuan: satuan,
-            // Jangan menimpa hpp_awal atau hpp_rata_rata di sini.
-            // Harga beli terakhir disinkronkan dari riwayat Barang Masuk
-            // oleh rebuildStockForItem() di bawah.
+            // Harga beli yang diedit menjadi acuan dasar baru.
+            // HPP rata-rata tetap dihitung ulang dari stok dan riwayat pembelian.
+            hpp_awal: hargaBeli,
+            harga_beli_terakhir: hargaBeli,
             harga_jual: hargaJual,
             stok_minimum: stokMinimum,
             status: status,
@@ -4455,8 +4456,17 @@ function ambilAngkaHarga(value) {
         if (errorInsertStok) throw errorInsertStok;
       }
 
-      // Hitung ulang HPP dari HPP awal permanen dan transaksi pembelian yang masih ada.
+      // Hitung ulang stok dan HPP dari HPP awal baru serta transaksi pembelian.
       await rebuildStockForItem(editId);
+
+      // Pertahankan harga yang secara manual disimpan melalui formulir Edit.
+      // rebuildStockForItem menghitung harga terakhir dari riwayat pembelian,
+      // jadi kita tulis kembali nilai edit agar perubahan tidak langsung tertimpa.
+      const { error: simpanHargaEditError } = await supabaseClient
+        .from("master_barang")
+        .update({ harga_beli_terakhir: hargaBeli, hpp_awal: hargaBeli })
+        .eq("id_barang", editId);
+      if (simpanHargaEditError) throw simpanHargaEditError;
 
       // --------------------------------------------------------
       // 3. BERHASIL EDIT
