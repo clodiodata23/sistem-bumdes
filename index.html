@@ -5694,12 +5694,13 @@ function ambilAngkaHarga(value) {
 
     // HPP awal disimpan terpisah agar penghapusan/edit barang masuk
     // tidak menebak-nebak nilai awal dari HPP rata-rata yang sudah berubah.
+    // Gunakan HPP awal yang tersimpan sebagai dasar tetap.
+    // Jangan menurunkan HPP awal dari HPP rata-rata yang sudah berubah.
     const hppAwal = Number(master.hpp_awal ?? master.harga_beli_terakhir ?? master.hpp_rata_rata) || 0;
-    const nilaiPembelian = (purchases || []).reduce((n,x)=>n+(Number(x.qty)||0)*(Number(x.harga_beli)||0),0);
-      const derived = ((Number(master.hpp_rata_rata) * (stokAwal + totalPurchaseQtyBefore)) - nilaiPembelian) / stokAwal;
-      if (Number.isFinite(derived) && derived >= 0) hppAwal = derived;
-    }
-    const nilaiPembelian = (purchases || []).reduce((n,x)=>n+(Number(x.qty)||0)*(Number(x.harga_beli)||0),0);
+    const nilaiPembelian = (purchases || []).reduce(
+      (n, x) => n + (Number(x.qty) || 0) * (Number(x.harga_beli) || 0),
+      0
+    );
     const nilaiAwal = stokAwal * hppAwal;
     const hppBaru = (stokAwal + masuk) > 0 ? Math.round((nilaiAwal + nilaiPembelian) / (stokAwal + masuk)) : 0;
     const hargaTerakhir = purchases && purchases.length ? Number(purchases[purchases.length-1].harga_beli)||0 : hppAwal;
