@@ -240,11 +240,11 @@
 
     .connection.ok {
 
-      color: var(--success);
+      color: #155875;
 
-      border-color: #b7dfc7;
+      border-color: #a9d9e8;
 
-      background: #f0faf4;
+      background: linear-gradient(135deg, #edf8fc, #dff1f8);
 
     }
 
@@ -2331,6 +2331,16 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
 
             <div>
 
+              <label for="salesDate">Tanggal Penjualan</label>
+
+              <input id="salesDate" name="salesDate" type="date" required>
+
+              <small class="field-help">Pilih tanggal transaksi, termasuk tanggal sebelumnya jika input terlambat.</small>
+
+            </div>
+
+            <div>
+
               <label for="qty">Jumlah Terjual</label>
 
               <input id="qty" name="qty" type="number" min="1" step="1" required>
@@ -3507,6 +3517,15 @@ function ambilAngkaHarga(value) {
   // SIMPAN PENJUALAN — SUPABASE SAJA
   // ============================================================
 
+  // Tanggal transaksi default menggunakan tanggal lokal perangkat.
+  (function initSalesDateField() {
+    const field = document.getElementById("salesDate");
+    if (!field) return;
+    const now = new Date();
+    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    field.value = localDate;
+  })();
+
   document.getElementById("salesForm").addEventListener("submit", async function(event) {
     event.preventDefault();
 
@@ -3514,15 +3533,16 @@ function ambilAngkaHarga(value) {
     const result = document.getElementById("salesResult");
     const data = {
       idBarang: document.getElementById("idBarang").value.trim(),
+      salesDate: document.getElementById("salesDate").value,
       qty: Number(document.getElementById("qty").value),
       pembayaran: document.getElementById("pembayaran").value,
       keterangan: document.getElementById("keterangan").value.trim(),
       linkNota: document.getElementById("linkNota").value.trim()
     };
 
-    if (!data.idBarang || data.qty <= 0) {
+    if (!data.idBarang || data.qty <= 0 || !data.salesDate) {
       result.className = "result error";
-      result.textContent = "❌ Pilih barang dan isi jumlah penjualan terlebih dahulu.";
+      result.textContent = "❌ Pilih barang, tanggal penjualan, dan isi jumlah penjualan terlebih dahulu.";
       return;
     }
 
@@ -3550,7 +3570,13 @@ function ambilAngkaHarga(value) {
     const stokMinimum = Number(selectedProduct.stokMinimum) || 0;
     const statusBaru = stokBaru <= 0 ? "HABIS" : (stokBaru <= stokMinimum ? "MENIPIS" : "AMAN");
     const idPenjualan = "PJL" + Date.now();
-    const tanggal = new Date().toISOString();
+    // Gunakan tanggal pilihan pengguna dan jam lokal saat input; simpan sebagai ISO timestamp.
+    const [salesYear, salesMonth, salesDay] = data.salesDate.split("-").map(Number);
+    const currentTime = new Date();
+    const tanggal = new Date(
+      salesYear, salesMonth - 1, salesDay,
+      currentTime.getHours(), currentTime.getMinutes(), currentTime.getSeconds()
+    ).toISOString();
 
     button.disabled = true;
     button.textContent = "Menyimpan...";
