@@ -2044,6 +2044,32 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
 }
 </style>
 
+
+<style id="sidang-jaya-blue-polish">
+/* Penyelarasan aksen hijau yang tersisa ke palet biru-teal. */
+:root { --primary:#174f70; --primary-dark:#103a55; --success:#176b91; }
+.btn-primary, #page-dashboard .btn.btn-primary, .panel .section-title::before,
+.summary-icon-3d, .status-icon-3d.ok {
+  background:linear-gradient(145deg,#3289ad,#174f70) !important;
+}
+.btn-primary:hover { background:linear-gradient(145deg,#26799d,#103a55) !important; }
+.connection.ok { color:#176b91 !important; border-color:#b9dce9 !important; background:linear-gradient(145deg,#fff,#eef7fb) !important; }
+.connection.ok::before { background:linear-gradient(145deg,#3289ad,#174f70) !important; }
+.sales-product-info.selected { color:#176b91 !important; }
+.result.success { background:#edf7fb !important; color:#155875 !important; }
+.badge-safe { color:#155875 !important; background:#e7f3f9 !important; }
+.sales-product-meta { display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto; }
+.sales-product-price { color:#176b91; font-size:12px; font-weight:800; white-space:nowrap; }
+.sales-product-stock { color:#586d7b; font-size:12px; white-space:nowrap; }
+.sales-product-option { gap:14px; }
+.sales-product-option:hover { background:#eef7fb !important; }
+@media(max-width:480px) {
+  .sales-product-option { align-items:flex-start; }
+  .sales-product-meta { white-space:normal; }
+  .sales-product-price,.sales-product-stock { font-size:11px; }
+}
+</style>
+
 </head>
 
 
@@ -3347,7 +3373,10 @@ function ambilAngkaHarga(value) {
 
           </span>
 
-          <span class="sales-product-stock">${escapeHtml(stockText)}</span>
+          <span class="sales-product-meta">
+            <span class="sales-product-price">Harga jual: ${escapeHtml(formatRupiah(Number(item.hargaJual) || 0))}</span>
+            <span class="sales-product-stock">${escapeHtml(stockText)}</span>
+          </span>
 
         </button>`;
 
