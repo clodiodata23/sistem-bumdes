@@ -2307,6 +2307,12 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
 
           <div class="form-grid">
 
+            <div>
+              <label for="salesDate">Tanggal Penjualan</label>
+              <input id="salesDate" name="salesDate" type="date" required>
+              <small class="field-help">Pilih tanggal transaksi, termasuk tanggal sebelumnya jika input terlambat.</small>
+            </div>
+
             <div class="sales-product-field">
 
               <label for="salesSearch">Barang</label>
@@ -2326,20 +2332,7 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
               <div id="salesProductInfo" class="sales-product-info">Pilih barang dari daftar.</div>
 
             </div>
-
-
-
-            <div>
-
-              <label for="salesDate">Tanggal Penjualan</label>
-
-              <input id="salesDate" name="salesDate" type="date" required>
-
-              <small class="field-help">Pilih tanggal transaksi, termasuk tanggal sebelumnya jika input terlambat.</small>
-
-            </div>
-
-            <div>
+<div>
 
               <label for="qty">Jumlah Terjual</label>
 
@@ -6937,6 +6930,26 @@ html, body { max-width:100%; overflow-x:hidden; }
 @media (max-width:900px) {
   .main { width:100% !important; margin-left:0 !important; }
 }
+</style>
+
+
+<style id="sidang-jaya-final-blue-status-date">
+/* Paksa status koneksi memakai palet biru-teal di atas semua aturan CSS lama. */
+.connection, .connection.ok, .connection.ok:hover {
+  color:#155875 !important;
+  border-color:#a9d9e8 !important;
+  background:linear-gradient(145deg,#fff,#e8f5fa) !important;
+}
+.connection::before, .connection.ok::before {
+  background:linear-gradient(145deg,#3289ad,#174f70) !important;
+}
+/* Pastikan pemilih tanggal terlihat pada formulir penjualan. */
+#salesForm label[for="salesDate"] { display:block !important; }
+#salesForm #salesDate {
+  display:block !important; visibility:visible !important; opacity:1 !important;
+  width:100%; min-height:49px; color:#173042 !important; background:#fff !important;
+}
+#salesForm .field-help { display:block; color:#617583; font-size:12px; margin-top:5px; }
 </style>
 
 </body>
