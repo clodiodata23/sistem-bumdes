@@ -87,6 +87,15 @@
 
       z-index: 20;
 
+    
+      /* Area menu dapat digeser sendiri saat isinya melebihi tinggi layar. */
+      height: 100vh;
+      height: 100dvh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      overscroll-behavior-y: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
     }
 
 
@@ -681,6 +690,17 @@
 
         transition: .2s;
 
+      
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-bottom: max(22px, env(safe-area-inset-bottom));
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
       }
 
 
