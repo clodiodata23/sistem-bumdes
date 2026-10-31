@@ -3609,7 +3609,10 @@ function ambilAngkaHarga(value) {
           ? "<br>Kas: <strong>Kas Masuk otomatis dicatat</strong>"
           : "");
 
+      // Pertahankan tanggal transaksi yang dipilih pengguna setelah form direset.
+      const tanggalPenjualanDipilih = data.salesDate;
       document.getElementById("salesForm").reset();
+      document.getElementById("salesDate").value = tanggalPenjualanDipilih;
       clearSalesProductSelection();
       salesProductsLoaded = false;
       salesProducts = [];
