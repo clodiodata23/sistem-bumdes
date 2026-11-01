@@ -2070,6 +2070,40 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
 }
 </style>
 
+
+<style id="sidang-jaya-pos-style">
+#page-penjualan .sj-pos-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin:14px 0}
+#page-penjualan .sj-cart-panel{border:1px solid #d8e5eb;background:#f8fcfe;border-radius:14px;padding:14px;min-width:0}
+#page-penjualan .sj-cart-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+#page-penjualan .sj-cart-head h3{margin:0 0 3px;font-size:1rem}
+#page-penjualan .sj-cart-head small,#page-penjualan .sj-cart-note{color:#627783;font-size:12px}
+#page-penjualan #sjCartCount{background:#e5f2f8;color:#174f70;border-radius:20px;padding:5px 9px;font-weight:700;font-size:12px;white-space:nowrap}
+#page-penjualan .sj-cart-items{display:flex;flex-direction:column;gap:7px;max-height:250px;overflow:auto}
+#page-penjualan .sj-cart-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:#fff;border:1px solid #e3edf2;border-radius:9px;padding:9px}
+#page-penjualan .sj-cart-name{font-weight:700;font-size:13px;overflow-wrap:anywhere}
+#page-penjualan .sj-cart-sub{color:#627783;font-size:11px;margin-top:3px}
+#page-penjualan .sj-cart-row-right{text-align:right}
+#page-penjualan .sj-cart-row-right strong{font-size:13px;display:block}
+#page-penjualan .sj-cart-qty{width:62px;padding:5px;border:1px solid #cbdbe3;border-radius:6px;margin-top:5px}
+#page-penjualan .sj-cart-remove{border:0;background:#fff0f0;color:#a12c2c;border-radius:6px;padding:5px 7px;margin-left:4px;cursor:pointer}
+#page-penjualan .sj-cart-empty{padding:15px;text-align:center;color:#6b7b83;font-size:13px}
+#page-penjualan .sj-cart-total-row{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #dce8ee;margin-top:10px;padding:12px 0;font-weight:700}
+#page-penjualan #sjCartTotal{font-size:1.25rem;color:#174f70}
+#page-penjualan .sj-checkout{width:100%}
+#page-penjualan .sj-cart-note{display:block;margin-top:8px;line-height:1.4}
+#page-penjualan #salesForm{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+@media(min-width:900px){
+ #page-penjualan .sj-pos-layout{grid-template-columns:minmax(0,1fr)}
+ #page-penjualan .panel:has(#salesForm){display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.72fr);column-gap:18px;align-items:start}
+ #page-penjualan .panel:has(#salesForm)>.section-title{grid-column:1/-1}
+ #page-penjualan .panel:has(#salesForm) #salesForm{grid-column:1;grid-row:2}
+ #page-penjualan .panel:has(#salesForm) .sj-pos-layout{grid-column:2;grid-row:2;margin:0}
+ #page-penjualan .panel:has(#salesForm) #salesResult,
+ #page-penjualan .panel:has(#salesForm) .history-box,
+ #page-penjualan .panel:has(#salesForm)>.help{grid-column:1/-1}
+}
+</style>
+
 </head>
 
 
@@ -2386,7 +2420,7 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
 
             <button class="btn btn-primary" type="submit" id="salesButton">
 
-              Simpan Penjualan
+              + Tambah ke Daftar
 
             </button>
 
@@ -2396,6 +2430,18 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
 
 
 
+        <div class="sj-pos-layout" id="sjPosLayout">
+          <div class="sj-cart-panel">
+            <div class="sj-cart-head">
+              <div><h3>Daftar Belanja</h3><small>Harga mengikuti Master Barang.</small></div>
+              <span id="sjCartCount">0 jenis</span>
+            </div>
+            <div class="sj-cart-items" id="sjCartItems"><div class="sj-cart-empty">Belum ada barang.</div></div>
+            <div class="sj-cart-total-row"><span>Total</span><strong id="sjCartTotal">Rp0</strong></div>
+            <button class="btn btn-primary sj-checkout" id="sjCheckoutButton" type="button" disabled>Simpan Transaksi &amp; Buat Nota</button>
+            <small class="sj-cart-note">Stok tersedia langsung dikurangi secara sementara saat barang masuk daftar.</small>
+          </div>
+        </div>
         <div id="salesResult" class="result"></div>
 
         <div class="history-box">
@@ -3519,116 +3565,177 @@ function ambilAngkaHarga(value) {
     field.value = localDate;
   })();
 
-  document.getElementById("salesForm").addEventListener("submit", async function(event) {
+
+  // Kasir multi-item Sidang Jaya: harga/HPP tetap bersumber dari Master Barang.
+  let sidangCart = [];
+  let sidangLastReceipt = null;
+
+  function sidangCartQty(id) {
+    return sidangCart.reduce((sum, row) => sum + (String(row.idBarang) === String(id) ? Number(row.qty) : 0), 0);
+  }
+  function sidangAvailable(item) {
+    return Math.max(0, (Number(item?.stokAkhir) || 0) - sidangCartQty(item?.idBarang));
+  }
+  function sidangCartTotal() {
+    return sidangCart.reduce((sum, row) => sum + Number(row.qty) * Number(row.hargaJual), 0);
+  }
+  function renderSidangCart() {
+    const items = document.getElementById("sjCartItems");
+    const count = document.getElementById("sjCartCount");
+    const total = document.getElementById("sjCartTotal");
+    const checkout = document.getElementById("sjCheckoutButton");
+    if (!items || !count || !total || !checkout) return;
+    count.textContent = `${sidangCart.length} jenis`;
+    total.textContent = formatRupiah(sidangCartTotal());
+    checkout.disabled = sidangCart.length === 0;
+    if (!sidangCart.length) {
+      items.innerHTML = '<div class="sj-cart-empty">Belum ada barang.</div>';
+      return;
+    }
+    items.innerHTML = sidangCart.map((row,i)=>`
+      <div class="sj-cart-row">
+        <div><div class="sj-cart-name">${escapeHtml(row.namaBarang)}</div>
+          <div class="sj-cart-sub">${formatRupiah(row.hargaJual)} / ${escapeHtml(row.satuan || "unit")}</div>
+          <input class="sj-cart-qty" type="number" min="1" step="1" value="${row.qty}" aria-label="Jumlah ${escapeHtml(row.namaBarang)}" data-cart-i="${i}">
+          <button type="button" class="sj-cart-remove" data-remove-i="${i}">Hapus</button>
+        </div>
+        <div class="sj-cart-row-right"><strong>${formatRupiah(row.qty*row.hargaJual)}</strong></div>
+      </div>`).join("");
+    items.querySelectorAll("[data-cart-i]").forEach(input=>input.addEventListener("change",function(){
+      const i=Number(this.dataset.cartI), val=Math.floor(Number(this.value));
+      const row=sidangCart[i], product=salesProducts.find(p=>String(p.idBarang)===String(row?.idBarang));
+      if(!row||!product||!Number.isFinite(val)||val<1){renderSidangCart();return;}
+      const otherQty=sidangCart.reduce((sum,r,j)=>sum+(j!==i&&String(r.idBarang)===String(row.idBarang)?Number(r.qty):0),0);
+      if(val+otherQty>(Number(product.stokAkhir)||0)){alert(`Stok ${row.namaBarang} tidak cukup. Sisa tersedia: ${Math.max(0,(Number(product.stokAkhir)||0)-otherQty)}.`);renderSidangCart();return;}
+      row.qty=val;renderSidangCart();renderSalesProductList(document.getElementById("salesSearch").value);
+    }));
+    items.querySelectorAll("[data-remove-i]").forEach(btn=>btn.addEventListener("click",function(){
+      sidangCart.splice(Number(this.dataset.removeI),1);renderSidangCart();renderSalesProductList(document.getElementById("salesSearch").value);
+    }));
+  }
+
+  // Refresh stock display in search results by subtracting items already in cart.
+  const sidangOriginalRenderSalesProductList = renderSalesProductList;
+  renderSalesProductList = function(keyword="") {
+    sidangOriginalRenderSalesProductList(keyword);
+    const list=document.getElementById("salesProductList");
+    if(!list) return;
+    list.querySelectorAll(".sales-product-option").forEach(button=>{
+      const product=salesProducts.find(p=>String(p.idBarang)===String(button.dataset.id));
+      if(!product) return;
+      const available=sidangAvailable(product);
+      const stockNode=button.querySelector(".sales-product-stock");
+      if(stockNode) stockNode.textContent=available>0?`Tersedia: ${formatNumber(available)}`:"Stok habis / sudah di daftar";
+      button.disabled=available<=0;
+      button.style.opacity=available<=0?".55":"1";
+    });
+  };
+
+  document.getElementById("salesForm").addEventListener("submit",function(event){
     event.preventDefault();
-
-    const button = document.getElementById("salesButton");
-    const result = document.getElementById("salesResult");
-    const data = {
-      idBarang: document.getElementById("idBarang").value.trim(),
-      salesDate: document.getElementById("salesDate").value,
-      qty: Number(document.getElementById("qty").value),
-      pembayaran: document.getElementById("pembayaran").value,
-      keterangan: document.getElementById("keterangan").value.trim(),
-      linkNota: document.getElementById("linkNota").value.trim()
-    };
-
-    if (!data.idBarang || data.qty <= 0 || !data.salesDate) {
-      result.className = "result error";
-      result.textContent = "❌ Pilih barang, tanggal penjualan, dan isi jumlah penjualan terlebih dahulu.";
-      return;
+    const result=document.getElementById("salesResult");
+    const id=document.getElementById("idBarang").value.trim();
+    const qty=Math.floor(Number(document.getElementById("qty").value));
+    const product=salesProducts.find(p=>String(p.idBarang)===String(id));
+    if(!product||!Number.isFinite(qty)||qty<1){
+      result.className="result error";result.textContent="Pilih barang dan masukkan jumlah minimal 1.";return;
     }
-
-    const selectedProduct = salesProducts.find(x => String(x.idBarang) === String(data.idBarang));
-    if (!selectedProduct) {
-      result.className = "result error";
-      result.textContent = "❌ Data barang belum termuat. Pilih kembali barang dari daftar.";
-      return;
+    const available=sidangAvailable(product);
+    if(qty>available){
+      result.className="result error";result.textContent=`Stok ${product.namaBarang} tidak cukup. Sisa tersedia untuk ditambahkan: ${formatNumber(available)}.`;return;
     }
-
-    const stokLama = Number(selectedProduct.stokAkhir) || 0;
-    if (data.qty > stokLama) {
-      result.className = "result error";
-      result.textContent = `❌ Stok ${selectedProduct.namaBarang} tidak mencukupi. Stok tersedia: ${formatNumber(stokLama)}.`;
-      return;
-    }
-
-    const hpp = Number(selectedProduct.hpp) || 0;
-    const hargaJual = Number(selectedProduct.hargaJual) || 0;
-    const totalPenjualan = data.qty * hargaJual;
-    const totalHpp = data.qty * hpp;
-    const labaKotor = totalPenjualan - totalHpp;
-    const stokBaru = stokLama - data.qty;
-    const terjualBaru = (Number(selectedProduct.terjual) || 0) + data.qty;
-    const stokMinimum = Number(selectedProduct.stokMinimum) || 0;
-    const statusBaru = stokBaru <= 0 ? "HABIS" : (stokBaru <= stokMinimum ? "MENIPIS" : "AMAN");
-    const idPenjualan = "PJL" + Date.now();
-    // Gunakan tanggal pilihan pengguna dan jam lokal saat input; simpan sebagai ISO timestamp.
-    const [salesYear, salesMonth, salesDay] = data.salesDate.split("-").map(Number);
-    const currentTime = new Date();
-    const tanggal = new Date(
-      salesYear, salesMonth - 1, salesDay,
-      currentTime.getHours(), currentTime.getMinutes(), currentTime.getSeconds()
-    ).toISOString();
-
-    button.disabled = true;
-    button.textContent = "Menyimpan...";
-    result.className = "result";
-    result.textContent = "";
-
-    let salesInserted = false;
-    let stockUpdated = false;
-
-    try {
-      const { error: salesError } = await supabaseClient.from("penjualan").insert({
-        id_penjualan: idPenjualan, tanggal: tanggal, id_barang: data.idBarang,
-        nama_barang: selectedProduct.namaBarang, qty: data.qty, hpp: hpp,
-        harga_jual: hargaJual, total_penjualan: totalPenjualan, total_hpp: totalHpp,
-        laba_kotor: labaKotor, pembayaran: data.pembayaran || "Tunai",
-        keterangan: data.keterangan || null, link_nota: data.linkNota || null
-      });
-      if (salesError) throw salesError;
-      salesInserted = true;
-
-      const { error: stockError } = await supabaseClient.from("stok").update({
-        terjual: terjualBaru, stok_akhir: stokBaru, status: statusBaru
-      }).eq("id_barang", data.idBarang);
-      if (stockError) throw stockError;
-      stockUpdated = true;
-
-      result.className = "result success";
-      result.innerHTML = "✅ Penjualan berhasil disimpan.<br>" +
-        "ID: <strong>" + escapeHtml(idPenjualan) + "</strong><br>" +
-        "Barang: <strong>" + escapeHtml(selectedProduct.namaBarang) + "</strong><br>" +
-        "Jumlah terjual: <strong>" + formatNumber(data.qty) + "</strong><br>" +
-        "Total: <strong>" + formatRupiah(totalPenjualan) + "</strong><br>" +
-        "HPP: <strong>" + formatRupiah(totalHpp) + "</strong><br>" +
-        "Laba kotor: <strong>" + formatRupiah(labaKotor) + "</strong><br>" +
-        "Stok sekarang: <strong>" + formatNumber(stokBaru) + "</strong>" +
-        (String(data.pembayaran || "").toLowerCase() === "tunai"
-          ? "<br>Kas: <strong>Kas Masuk otomatis dicatat</strong>"
-          : "");
-
-      // Pertahankan tanggal transaksi yang dipilih pengguna setelah form direset.
-      const tanggalPenjualanDipilih = data.salesDate;
-      document.getElementById("salesForm").reset();
-      document.getElementById("salesDate").value = tanggalPenjualanDipilih;
-      clearSalesProductSelection();
-      salesProductsLoaded = false;
-      salesProducts = [];
-      await loadSalesHistory();
-      await refreshCrudViews();
-    } catch (error) {
-      if (stockUpdated) await supabaseClient.from("stok").update({ terjual: Number(selectedProduct.terjual) || 0, stok_akhir: stokLama, status: selectedProduct.status || "AMAN" }).eq("id_barang", data.idBarang);
-      if (salesInserted) await supabaseClient.from("penjualan").delete().eq("id_penjualan", idPenjualan);
-      result.className = "result error";
-      result.textContent = "❌ " + (error.message || "Gagal menyimpan penjualan.");
-      console.error("SUPABASE PENJUALAN ERROR:", error);
-    } finally {
-      button.disabled = false;
-      button.textContent = "Simpan Penjualan";
-    }
+    const existing=sidangCart.find(r=>String(r.idBarang)===String(id));
+    if(existing) existing.qty+=qty;
+    else sidangCart.push({idBarang:product.idBarang,namaBarang:product.namaBarang,satuan:product.satuan||"",qty,hargaJual:Number(product.hargaJual)||0,hpp:Number(product.hpp)||0});
+    result.className="result";result.textContent=`${product.namaBarang} masuk ke daftar belanja. Stok tersedia: ${formatNumber(sidangAvailable(product))}.`;
+    document.getElementById("salesSearch").value="";
+    document.getElementById("qty").value="";
+    clearSalesProductSelection();renderSidangCart();renderSalesProductList("");
+    document.getElementById("salesSearch").focus();
   });
+
+  function sidangReceiptMarkup(receipt){
+    return `<div id="sjReceipt" style="width:48mm;max-width:48mm;margin:0 auto;font:11px Arial,sans-serif;color:#111">
+      <div style="text-align:center"><strong style="font-size:14px">BUMDes Sidang Jaya</strong><br><small>NOTA PENJUALAN</small></div>
+      <hr style="border:0;border-top:1px dashed;margin:7px 0">
+      <div>No: ${escapeHtml(receipt.no)}</div><div>Tanggal: ${escapeHtml(receipt.date)}</div><div>Bayar: ${escapeHtml(receipt.payment)}</div>
+      <hr style="border:0;border-top:1px dashed;margin:7px 0">
+      <table style="width:100%;font-size:10px;border-collapse:collapse"><tbody>${receipt.items.map(x=>`<tr><td style="padding:3px 0">${escapeHtml(x.namaBarang)}<br>${x.qty} × ${formatRupiah(x.hargaJual)}</td><td style="text-align:right;vertical-align:bottom">${formatRupiah(x.qty*x.hargaJual)}</td></tr>`).join("")}</tbody></table>
+      <hr style="border:0;border-top:1px dashed;margin:7px 0">
+      <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:13px"><span>TOTAL</span><span>${formatRupiah(receipt.total)}</span></div>
+      ${receipt.note?`<p style="font-size:10px">Catatan: ${escapeHtml(receipt.note)}</p>`:""}
+      <p style="text-align:center;font-size:10px;margin-top:14px">Terima kasih.</p></div>`;
+  }
+  function printSidangReceipt(){
+    if(!sidangLastReceipt)return;
+    const w=window.open("","_blank","width=420,height=650");
+    if(!w){alert("Izinkan pop-up browser untuk mencetak nota.");return;}
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Nota ${escapeHtml(sidangLastReceipt.no)}</title><style>@page{size:58mm auto;margin:2mm}html,body{width:54mm;margin:0;padding:0;background:#fff}*{box-sizing:border-box}</style></head><body>${sidangReceiptMarkup(sidangLastReceipt)}<script>window.onload=function(){window.print()}<\/script></body></html>`);
+    w.document.close();
+  }
+  document.getElementById("sjCheckoutButton").addEventListener("click",async function(){
+    const btn=this,result=document.getElementById("salesResult");
+    if(!sidangCart.length)return;
+    const dateStr=document.getElementById("salesDate").value;
+    if(!dateStr){result.className="result error";result.textContent="Pilih tanggal transaksi.";return;}
+    btn.disabled=true;btn.textContent="Menyimpan transaksi...";
+    const payment=document.getElementById("pembayaran").value||"Tunai";
+    const note=document.getElementById("keterangan").value.trim();
+    const linkNota=document.getElementById("linkNota").value.trim();
+    const noNota="SJ-"+dateStr.replaceAll("-","")+"-"+String(Date.now()).slice(-6);
+    const [yy,mm,dd]=dateStr.split("-").map(Number),now=new Date();
+    const tanggal=new Date(yy,mm-1,dd,now.getHours(),now.getMinutes(),now.getSeconds()).toISOString();
+    const inserted=[],backups=[];let stockCount=0;
+    try{
+      // Validate current stock again from Supabase before inserting.
+      const ids=sidangCart.map(x=>x.idBarang);
+      const [{data:masters,error:me},{data:stocks,error:se}]=await Promise.all([
+        supabaseClient.from("master_barang").select("id_barang,nama_barang,satuan,harga_jual,hpp_rata_rata,aktif").in("id_barang",ids),
+        supabaseClient.from("stok").select("id_barang,terjual,stok_akhir,status").in("id_barang",ids)
+      ]);
+      if(me)throw me;if(se)throw se;
+      const mmMap=new Map((masters||[]).map(x=>[String(x.id_barang),x]));
+      const ssMap=new Map((stocks||[]).map(x=>[String(x.id_barang),x]));
+      const finalItems=sidangCart.map(row=>{
+        const m=mmMap.get(String(row.idBarang)),st=ssMap.get(String(row.idBarang));
+        if(!m||m.aktif===false||!st)throw new Error(`Data barang ${row.namaBarang} tidak ditemukan/aktif.`);
+        const qty=Number(row.qty),available=Number(st.stok_akhir)||0;
+        if(qty>available)throw new Error(`Stok ${m.nama_barang} berubah. Stok terkini ${formatNumber(available)}.`);
+        const price=Number(m.harga_jual)||0,hpp=Number(m.hpp_rata_rata)||0;
+        return {idBarang:m.id_barang,namaBarang:m.nama_barang,satuan:m.satuan||"",qty,hargaJual:price,hpp,total:qty*price,totalHpp:qty*hpp,laba:qty*(price-hpp),stock:st,after:available-qty,terjualAfter:(Number(st.terjual)||0)+qty};
+      });
+      for(const item of finalItems){
+        const idPenjualan="PJL"+Date.now()+Math.floor(Math.random()*10000);
+        const {error}=await supabaseClient.from("penjualan").insert({
+          id_penjualan:idPenjualan,tanggal,id_barang:item.idBarang,nama_barang:item.namaBarang,qty:item.qty,
+          hpp:item.hpp,harga_jual:item.hargaJual,total_penjualan:item.total,total_hpp:item.totalHpp,laba_kotor:item.laba,
+          pembayaran:payment,keterangan:[`Nota ${noNota}`,note].filter(Boolean).join(" | ")||null,
+          link_nota:linkNota||null
+        });
+        if(error)throw error;inserted.push(idPenjualan);
+      }
+      for(const item of finalItems){
+        backups.push({id:item.idBarang,stock:item.stock});
+        const {error}=await supabaseClient.from("stok").update({
+          terjual:item.terjualAfter,stok_akhir:item.after,status:item.after<=0?"HABIS":(item.after<=Number(item.stock.stok_minimum||0)?"MENIPIS":"AMAN")
+        }).eq("id_barang",item.idBarang);
+        if(error)throw error;stockCount++;
+      }
+      sidangLastReceipt={no:noNota,date:dateStr,payment,note,items:finalItems,total:finalItems.reduce((a,x)=>a+x.total,0)};
+      result.className="result success";
+      result.innerHTML=`✅ Transaksi tersimpan. Nota <strong>${escapeHtml(noNota)}</strong><br>Total: <strong>${formatRupiah(sidangLastReceipt.total)}</strong><br><button class="btn btn-secondary" id="sjPrintReceipt" type="button" style="margin-top:10px">Cetak / Simpan Nota PDF</button>`;
+      document.getElementById("sjPrintReceipt").addEventListener("click",printSidangReceipt);
+      sidangCart=[];renderSidangCart();
+      const keepDate=dateStr;document.getElementById("salesForm").reset();document.getElementById("salesDate").value=keepDate;clearSalesProductSelection();
+      salesProductsLoaded=false;salesProducts=[];await loadSalesHistory();await refreshCrudViews();
+    }catch(err){
+      for(let i=stockCount-1;i>=0;i--){const b=backups[i];try{await supabaseClient.from("stok").update({terjual:b.stock.terjual,stok_akhir:b.stock.stok_akhir,status:b.stock.status}).eq("id_barang",b.id);}catch(e){console.error("Rollback stok",e);}}
+      if(inserted.length){try{await supabaseClient.from("penjualan").delete().in("id_penjualan",inserted);}catch(e){console.error("Rollback penjualan",e);}}
+      result.className="result error";result.textContent="❌ "+(err.message||"Gagal menyimpan transaksi.");console.error(err);
+    }finally{btn.disabled=sidangCart.length===0;btn.textContent="Simpan Transaksi & Buat Nota";}
+  });
+  renderSidangCart();
+
 
 
   // DATA BARANG UNTUK BARANG MASUK
