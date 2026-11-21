@@ -7145,7 +7145,7 @@ html, body { max-width:100%; overflow-x:hidden; }
 @keyframes uxDrop{from{transform:translateY(-30px);opacity:0}}@keyframes uxOut{to{transform:translateY(-20px);opacity:0}}
 .btn:active,button:active{transform:scale(.96)}
 .btn[disabled]{opacity:.75;position:relative}
-.btn[disabled]::after{content:"";display:inline-block;width:14px;height:14px;margin-left:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:uxSpin .7s linear infinite}
+.btn.ux-busy::after{content:"";display:inline-block;width:14px;height:14px;margin-left:8px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:uxSpin .7s linear infinite}
 @media(max-width:900px){
   body{background:#edf3f6;-webkit-tap-highlight-color:transparent}
   .topbar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:linear-gradient(135deg,#1f6385,#102f45)!important;color:#fff;border:0!important;border-radius:0 0 24px 24px!important;margin:-10px -10px 14px!important;padding:calc(12px + env(safe-area-inset-top)) 16px 18px!important;flex-wrap:nowrap!important;box-shadow:0 8px 20px rgba(16,47,69,.25)!important}
@@ -7597,12 +7597,13 @@ window.sjShowReceipt = function (r) {
   window.alert=function(m){toast(m);};window.uxToast=toast;
 
   /* ---- Animasi loading otomatis untuk semua simpan/hapus ---- */
-  var showT,idleT,burst=0,op=false,kind='';
+  var showT,idleT,burst=0,op=false,kind='',clicked=null;
+  document.addEventListener('click',function(e){clicked=e.target.closest?e.target.closest('.btn'):null;},true);
   document.addEventListener('ux:busy',function(){
     if(ux.pending>0){
       clearTimeout(idleT);
       if(!burst){burst=Date.now();bar.className='';void bar.offsetWidth;bar.className='on';}
-      if(ux.write>0){op=true;kind=ux.kind;busy.querySelector('.txt').textContent=kind;
+      if(ux.write>0){op=true;kind=ux.kind;busy.querySelector('.txt').textContent=kind;if(clicked)clicked.classList.add('ux-busy');
         if(!showT&&!busy.classList.contains('on'))showT=setTimeout(function(){busy.classList.add('on');},120);}
     }else{
       idleT=setTimeout(finish,450);
@@ -7610,6 +7611,7 @@ window.sjShowReceipt = function (r) {
   });
   function finish(){
     clearTimeout(showT);showT=null;busy.classList.remove('on');bar.className='end';
+    document.querySelectorAll('.ux-busy').forEach(function(b){b.classList.remove('ux-busy');});clicked=null;
     if(op&&ux.lastToast<burst){
       if(ux.err)toast('Gagal memproses data. Periksa koneksi lalu coba lagi.','err');
       else toast(/Menghapus/.test(kind)?'Data berhasil dihapus':'Data berhasil disimpan','ok');
