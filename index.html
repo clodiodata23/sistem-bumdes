@@ -9,6 +9,8 @@
   <meta charset="UTF-8">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- Mode offline: HARUS sebelum ux-fetch-hook dan Supabase -->
+  <script src="./assets/js/offline-layer.js"></script>
   <script id="ux-fetch-hook">
 /* Pantau permintaan ke Supabase (dipasang SEBELUM createClient) untuk animasi loading */
 (function(){
@@ -27,7 +29,7 @@
 })();
 </script>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js"></script>
 
   <title>BUMDes - Sistem Kas & Inventori</title>
 
@@ -2122,6 +2124,12 @@ th.interactive-sort-active .interactive-sort-icon{color:#17465d;}
 }
 </style>
 
+<style id="offline-pill-style">
+.off-pill{position:fixed;left:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:9000;padding:8px 14px;border:0;border-radius:999px;font:600 12px "Segoe UI",system-ui,sans-serif;color:#fff;background:#155875;box-shadow:0 6px 18px rgba(16,36,50,.28);cursor:pointer}
+.off-pill.off{background:#4b5563}.off-pill.wait{background:#e0a526;color:#2b1d00}.off-pill.bad{background:#b5382a}
+.off-pill[hidden]{display:none}
+@media (min-width:901px){.off-pill{bottom:16px}}
+</style>
 </head>
 
 
@@ -6098,20 +6106,7 @@ function ambilAngkaHarga(value) {
   });
 })();
 </script>
-<script>
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./service-worker.js")
-            .then(() => {
-                console.log("Service Worker berhasil aktif");
-            })
-            .catch(error => {
-                console.error("Service Worker gagal:", error);
-            });
-    });
-}
-
-</script>
+<!-- Service worker didaftarkan oleh assets/js/offline-layer.js (sw.js) -->
 
 <script>
     // ============================================================
