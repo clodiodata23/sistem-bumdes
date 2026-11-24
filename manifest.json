@@ -1,7 +1,10 @@
 {
   "name": "BUMDes Sidang Jaya - Kas & Inventori",
   "short_name": "BUMDes SJ",
+  "description": "Sistem Kas dan Inventori BUMDes Sidang Jaya",
+  "lang": "id",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#eef4f7",
   "theme_color": "#155875",
@@ -17,9 +20,13 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "description": "Sistem Kas dan Inventori BUMDes Sidang Jaya",
-  "lang": "id",
-  "scope": "./"
+  "id": "./"
 }

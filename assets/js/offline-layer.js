@@ -110,8 +110,9 @@
   }
   function bodyKeys(body){try{return Object.keys(JSON.parse(body)).sort().join(',');}catch(_){return '';}}
   /* Pola update stok Sidang Jaya: penjualan = terjual+stok_akhir+status, barang masuk = barang_masuk+stok_akhir+status. */
-  var KEY_JUAL=['terjual','stok_akhir','status'].sort().join(','),KEY_MASUK=['barang_masuk','stok_akhir','status'].sort().join(',');
-  var isStokKeys=function(k){return k===KEY_JUAL||k===KEY_MASUK;};
+  var KEY_JUAL='stok_akhir,terjual',KEY_MASUK='barang_masuk,stok_akhir';
+  var noStatus=function(k){return k.split(',').filter(function(x){return x!=='status';}).join(',');};
+  var isStokKeys=function(k){k=noStatus(k);return k===KEY_JUAL||k===KEY_MASUK;};
   /* Yang boleh diantrekan saat offline: tambah data baru (POST) dan efek sampingnya (stok, harga beli/HPP).
      Edit / hapus data lama TIDAK diantrekan karena butuh hitung ulang stok dari server. */
   function queueable(url,method,body){
@@ -189,7 +190,7 @@
       var b=JSON.parse(it.body||'{}');
       if(!id||id.indexOf('eq.')!==0||!be||be.indexOf('eq.')!==0)return false;
       id=id.slice(3);var before=Number(be.slice(3)),after=Number(b.stok_akhir);
-      var keys=Object.keys(b).sort().join(','),kJual=keys===KEY_JUAL,kMasuk=keys===KEY_MASUK;
+      var keys=noStatus(Object.keys(b).sort().join(',')),kJual=keys===KEY_JUAL,kMasuk=keys===KEY_MASUK;
       if(!(kJual||kMasuk)||!isFinite(before)||!isFinite(after))return false;
       var delta=after-before,base=u.origin+u.pathname;
       var h=Object.assign({},it.h);if(tok)h.authorization='Bearer '+tok;
@@ -198,7 +199,7 @@
         var g=await raw(base+'?id_barang=eq.'+enc(id)+'&select=barang_masuk,terjual,stok_akhir,stok_minimum',{headers:hg});
         if(!g.ok)return false;var rows=await g.json();if(!rows.length)return false;var cur=rows[0];
         var akhir=Number(cur.stok_akhir)+delta,min=Number(cur.stok_minimum||0);
-        var nb={stok_akhir:akhir,status:akhir<=0?'HABIS':(akhir<=min?'MENIPIS':'AMAN')};
+        var nb={stok_akhir:akhir};if('status' in b)nb.status=akhir<=0?'HABIS':(akhir<=min?'MENIPIS':'AMAN');
         if(kJual)nb.terjual=Number(cur.terjual||0)-delta;else nb.barang_masuk=Number(cur.barang_masuk||0)+delta;
         var hp=Object.assign({},h,{'content-type':'application/json',prefer:'return=representation'});
         var r=await raw(base+'?id_barang=eq.'+enc(id)+'&stok_akhir=eq.'+cur.stok_akhir+'&select=id_barang',{method:'PATCH',headers:hp,body:JSON.stringify(nb)});

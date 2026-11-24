@@ -1,8 +1,8 @@
 /* sw.js — service worker BUMDes Sidang Jaya: aplikasi bisa dibuka tanpa internet (setelah pernah dibuka online).
    Naikkan VERSION setiap kali file aplikasi diperbarui agar pengguna mendapat versi baru. */
-const VERSION='sidangjaya-v1';
-const SHELL=["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./elegant-theme.css", "./assets/js/offline-layer.js"];
-const CDN=["https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"];
+const VERSION='sidangjaya-v4';
+const SHELL=["./", "./apple-touch-icon.png", "./assets/css/legacy.css", "./assets/css/theme-pro.css", "./assets/img/logo-1-a7a78145.webp", "./assets/img/logo-2-a2c60843.png", "./assets/img/logo-3-0a7bec3f.png", "./assets/js/backup-data-script.js", "./assets/js/bumdes-auth-script.js", "./assets/js/bumdes-reset-operasional-script.js", "./assets/js/bumdes-user-management-script.js", "./assets/js/dashboard-plus.js", "./assets/js/final-table-and-date-script.js", "./assets/js/hide-id-columns-global.js", "./assets/js/inline-1.js", "./assets/js/offline-layer.js", "./assets/js/pasang-aplikasi.js", "./assets/js/perf-core-script.js", "./assets/js/reprint-nota.js", "./assets/js/sales-qty-stepper-script.js", "./assets/js/stok-bulanan.js", "./assets/js/suara-aplikasi.js", "./assets/js/tutup-kas.js", "./assets/js/ui-enhance.js", "./assets/js/ux-edit-form-script.js", "./assets/js/ux-layer-script.js", "./assets/js/wa-nota.js", "./assets/js/welcome-splash-script.js", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./index.html", "./manifest.json"];
+const CDN=["https://unpkg.com/@supabase/supabase-js@2.57.0/dist/umd/supabase.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js", "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"];
 const CDN_HOSTS=['unpkg.com','cdnjs.cloudflare.com','cdn.jsdelivr.net','fonts.googleapis.com','fonts.gstatic.com'];
 /* Chrome menolak respons ber-flag "redirected" untuk navigasi; salin tanpa flag itu. */
 async function clean(r){
@@ -31,7 +31,7 @@ self.addEventListener('fetch',e=>{
         return r;
       }catch(_){
         const c=await caches.open(VERSION);
-        for(const k of [req,'./','./index.html']){
+        for(const k of [req,'./index.html','./']){
           const hit=await c.match(k,{ignoreSearch:true});
           if(hit)return clean(hit);
         }

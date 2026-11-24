@@ -1,0 +1,212 @@
+/* ==========================================================
+   theme-pro.css — lapisan tampilan akhir BUMDes (dimuat PALING AKHIR)
+   Ubah warna/ukuran cukup lewat token di :root berikut.
+   ========================================================== */
+:root{
+  --primary:#155875; --primary-dark:#123d55; --primary-soft:#e3eff5;
+  --accent:#c8962e;                       /* emas padi: penanda aksi & fokus */
+  --bg:#eef4f7; --card:#fff; --text:#161f23; --muted:#5f6f66; --border:#d8e2e9;
+  --radius:14px; --radius-sm:10px;
+  --shadow-sm:0 1px 2px rgba(14,52,70,.06),0 2px 8px rgba(14,52,70,.05);
+  --shadow-lg:0 24px 60px -12px rgba(6,33,45,.45);
+  --font:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --ring:0 0 0 3px rgba(200,150,46,.35);
+}
+
+/* ---------- Dasar ---------- */
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body,button,input,select,textarea{font-family:var(--font)!important}
+body{background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:none;box-shadow:var(--ring)!important;border-radius:var(--radius-sm)}
+::selection{background:var(--primary);color:#fff}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* ---------- Komponen aplikasi ---------- */
+.card{border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
+.btn,button.btn{border-radius:var(--radius-sm);font-weight:600;letter-spacing:.01em;transition:transform .12s,box-shadow .2s,filter .2s}
+.btn:hover{filter:brightness(1.06);box-shadow:var(--shadow-sm)}
+.btn:active{transform:translateY(1px)}
+input,select,textarea{border-radius:var(--radius-sm)}
+table{border-collapse:separate;border-spacing:0}
+table thead th{background:var(--primary-soft);color:var(--primary-dark);font-weight:700;border-bottom:1px solid var(--border)}
+table tbody tr:hover td{background:#f2f7fa}
+.sidebar{box-shadow:6px 0 24px -12px rgba(6,33,45,.5)}
+.sidebar .nav button{border-radius:var(--radius-sm);transition:background .15s}
+
+/* ---------- Halaman login ---------- */
+#bumdesLoginGate{
+  background:
+    radial-gradient(900px 500px at 88% -10%,rgba(200,150,46,.22),transparent 60%),
+    radial-gradient(700px 520px at -10% 110%,rgba(121,156,172,.25),transparent 60%),
+    linear-gradient(140deg,#0b2536 0%,#123d55 55%,#155875 100%)!important;
+}
+#bumdesLoginGate .bumdes-login-shell{
+  border-radius:22px!important;overflow:hidden;box-shadow:var(--shadow-lg)!important;
+  border:1px solid rgba(255,255,255,.14)!important;background:var(--card)!important;
+}
+#bumdesLoginGate .bumdes-login-intro{
+  background:linear-gradient(160deg,#123d55,#155875)!important;color:#fff!important;
+}
+#bumdesLoginGate .bumdes-login-intro h1{letter-spacing:-.02em;line-height:1.15;font-weight:800}
+#bumdesLoginGate .bumdes-login-intro p{color:rgba(255,255,255,.82)!important;max-width:46ch}
+#bumdesLoginGate .bumdes-login-feature{border-top:1px solid rgba(255,255,255,.18)!important}
+#bumdesLoginGate .bumdes-login-formside{background:var(--card)!important}
+#bumdesLoginGate .bumdes-login-card h2{color:var(--primary-dark)!important;font-weight:800;letter-spacing:-.02em}
+#bumdesLoginGate .login-sub{color:var(--muted)!important}
+#bumdesLoginGate .bumdes-login-logos{border-bottom:1px solid var(--border)!important}
+#bumdesLoginGate .bumdes-login-logos img{object-fit:contain}
+
+#bumdesLoginGate .bumdes-login-field{font-weight:600;color:var(--text)!important}
+#bumdesLoginGate .bumdes-login-field input,
+#bumdesLoginGate .bumdes-password-wrap input{
+  border:1.5px solid var(--border)!important;border-radius:var(--radius-sm)!important;
+  background:#fbfcfd!important;color:var(--text)!important;transition:border-color .15s,box-shadow .15s,background .15s;
+}
+#bumdesLoginGate .bumdes-login-field input:hover{border-color:#c4ced3!important}
+#bumdesLoginGate .bumdes-login-field input:focus,
+#bumdesLoginGate .bumdes-password-wrap input:focus{
+  border-color:var(--accent)!important;background:#fff!important;box-shadow:var(--ring)!important;outline:none;
+}
+#bumdesLoginGate .bumdes-password-toggle{color:var(--primary)!important;font-weight:700;border-radius:8px}
+#bumdesLoginGate .bumdes-password-toggle:hover{background:var(--primary-soft)!important}
+
+#bumdesLoginGate #bumdesLoginButton{
+  background:linear-gradient(180deg,#19546f,#155875)!important;color:#fff!important;border:0!important;
+  border-radius:var(--radius-sm)!important;font-weight:700;letter-spacing:.01em;
+  box-shadow:0 8px 20px -8px rgba(20,68,91,.7);transition:transform .12s,box-shadow .2s,filter .2s;
+}
+#bumdesLoginGate #bumdesLoginButton:hover{filter:brightness(1.08);box-shadow:0 12px 26px -8px rgba(20,68,91,.75)}
+#bumdesLoginGate #bumdesLoginButton:active{transform:translateY(1px)}
+#bumdesLoginGate #bumdesLoginButton:disabled{opacity:.65;cursor:progress}
+#bumdesLoginGate #bumdesLoginMessage{border-radius:var(--radius-sm);line-height:1.45}
+#bumdesLoginGate #bumdesLoginMessage:not(:empty){padding:10px 12px;background:#fdf1ef;color:#9b2c20!important}
+#bumdesLoginGate .bumdes-login-footnote{color:var(--muted)!important}
+
+/* ---------- Toast & sheet (lapisan UX) ---------- */
+.uxToast{border-radius:12px!important;box-shadow:0 10px 30px -10px rgba(6,33,45,.45)!important;font-family:var(--font)}
+
+/* ==========================================================
+   SISTEM DESAIN — token tambahan + komponen seragam
+   ========================================================== */
+:root{
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;           /* jarak */
+  --fs-xs:12px;--fs-sm:13px;--fs-md:14px;--fs-lg:18px;--fs-xl:24px;    /* ukuran huruf */
+  --ok:#154a62;--ok-bg:#e8f1f5;--warn:#8a5a00;--warn-bg:#fff4d6;
+  --bad:#a63225;--bad-bg:#fdecea;--info:#1d5f7a;--info-bg:#e5f2f7;--neutral-bg:#eef1ef;
+}
+
+/* Lencana status — satu gaya di semua halaman */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;font-size:var(--fs-xs);font-weight:700;line-height:1.5;white-space:nowrap;border-radius:999px}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.badge-safe{color:var(--ok);background:var(--ok-bg)}
+.badge-warning{color:var(--warn);background:var(--warn-bg)}
+.badge-danger{color:var(--bad);background:var(--bad-bg)}
+.badge-info{color:var(--info);background:var(--info-bg)}
+.badge-empty{color:var(--muted);background:var(--neutral-bg)}
+
+/* Tampilan kosong */
+.es{display:flex;flex-direction:column;align-items:center;gap:var(--s2);padding:var(--s5) var(--s4);color:var(--muted);text-align:center}
+.es svg{width:40px;height:40px;stroke:var(--primary);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
+.es-t{font-weight:700;color:var(--text);font-size:var(--fs-md)}
+.es-h{font-size:var(--fs-sm)}
+
+/* Kerangka pemuatan (skeleton) */
+.sk{display:block;width:100%}
+.sk i{display:block;height:14px;margin:10px 0;border-radius:7px;background:linear-gradient(90deg,#e6eaec 25%,#eef4f7 50%,#e6eaec 75%);background-size:200% 100%;animation:skShine 1.2s linear infinite}
+.sk i:nth-child(2){width:82%}.sk i:nth-child(3){width:64%}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@keyframes skShine{to{background-position:-200% 0}}
+
+/* ---------- Ikon SVG (pengganti emoji) ---------- */
+.ico{width:1.1em;height:1.1em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ico-w{display:inline-flex;margin-right:.35em;vertical-align:middle}
+.ico-ok{color:var(--ok)}.ico-bad{color:var(--bad)}.ico-warn{color:var(--warn)}
+
+/* ---------- Dashboard: perbandingan, grafik, stok ---------- */
+.delta{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-xs);font-weight:600;color:var(--muted)}
+.delta .ico{width:14px;height:14px}
+.d-up{color:var(--ok)}.d-down{color:var(--bad)}.d-flat{color:var(--muted)}
+.dc{width:100%;height:auto;display:block}
+.dc-grid{stroke:var(--border);stroke-width:1}
+.dc-lab{fill:var(--muted);font-size:11px;font-family:var(--font)}
+.dc-bar{fill:var(--primary);transition:fill .15s}.dc-bar:hover{fill:var(--accent)}
+.rs-row{display:flex;width:100%;align-items:center;justify-content:space-between;gap:var(--s3);padding:10px 12px;margin:0 0 var(--s2);text-align:left;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text);transition:border-color .15s,background .15s}
+.rs-row:hover{border-color:var(--accent);background:#fffaf0}
+.rs-n{display:flex;flex-direction:column;font-weight:600;min-width:0}
+.rs-n small{font-weight:400;color:var(--muted);font-size:var(--fs-xs)}
+.rs-more{text-align:center;padding-top:var(--s1)}
+
+/* ---------- WhatsApp, Tutup Kas, indikator offline ---------- */
+.btn-wa{background:#1c76a0!important;color:#fff!important;border:0}
+.wa-row{display:flex;gap:var(--s2);flex-wrap:wrap;justify-content:center;margin-top:var(--s3)}
+.wa-row input{flex:1 1 200px;min-width:0;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm)}
+.tk-sheet{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--card)}
+.tk-row{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);padding:12px var(--s4);border-bottom:1px solid var(--border)}
+.tk-row:last-child{border-bottom:0}
+.tk-row input{width:min(220px,55%);text-align:right}
+.tk-total{background:var(--primary-soft);font-weight:700;color:var(--primary-dark)}
+@media (max-width:760px){#page-tutup-kas .cards{grid-template-columns:1fr!important}}
+.off-pill{position:fixed;left:12px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9000;padding:8px 14px;border:0;border-radius:999px;font:600 12px var(--font);color:#fff;background:var(--primary);box-shadow:var(--shadow-lg);cursor:pointer}
+.off-pill.off{background:#4b5563}.off-pill.wait{background:var(--accent);color:#2b1d00}.off-pill.bad{background:var(--bad)}
+.off-pill[hidden]{display:none}
+@media (min-width:901px){.off-pill{bottom:16px}}
+
+/* ===== Manajemen Pengguna ===== */
+.um-grid{display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.4fr);gap:20px;align-items:start}
+.um-card{padding:24px;min-width:0}
+.um-title{margin:0 0 6px;color:var(--primary)}
+.um-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.um-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 12px}
+.um-tools input{flex:1 1 200px;min-width:0}
+.um-list{display:flex;flex-direction:column;gap:10px}
+.um-empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:14px}
+.um-user{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:#fff}
+.um-av{flex:0 0 42px;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px}
+.um-av-admin,.um-role-admin{background:#fdf0d2;color:#8a6414}
+.um-av-petugas,.um-role-petugas{background:var(--primary-soft);color:var(--primary-dark)}
+.um-info{flex:1;min-width:0}
+.um-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.um-you{font-size:10px;font-weight:700;background:var(--primary);color:#fff;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:middle}
+.um-role{display:inline-block;margin-top:3px;font-size:11px;font-weight:700;border-radius:999px;padding:2px 10px}
+.um-actions{display:flex;gap:8px;flex:0 0 auto}
+.um-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 13px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--primary-dark);font-family:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.um-btn:hover{border-color:var(--primary);background:var(--primary-soft)}
+.um-btn-del{color:#b42318;border-color:#f0c9c4;background:#fff5f4}
+.um-btn-del:hover{background:#fde4e1;border-color:#e0a49d}
+.um-btn-ok{background:var(--primary);border-color:var(--primary);color:#fff}
+.um-btn-ok:hover{background:var(--primary-dark)}
+.um-btn-solid-del{background:#c0392b;border-color:#c0392b;color:#fff}
+.um-btn-solid-del:hover{background:#a93226}
+.um-btn:disabled{opacity:.6;cursor:default}
+.um-passwrap{position:relative}
+.um-passwrap input{padding-right:84px}
+.um-eye{position:absolute;right:8px;bottom:8px;border:0;background:var(--primary-soft);color:var(--primary-dark);border-radius:8px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer}
+.um-modal{position:fixed;inset:0;z-index:2000000;display:flex;align-items:flex-end;justify-content:center}
+.um-backdrop{position:absolute;inset:0;background:rgba(15,25,30,.5)}
+.um-sheet{position:relative;width:min(440px,100%);background:#fff;border-radius:18px 18px 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+.um-sheet h3{margin:0 0 14px;color:var(--primary-dark)}
+.um-lbl{display:block;font-weight:600;font-size:13px;margin-bottom:14px}
+.um-lbl input{display:block;width:100%;margin-top:6px}
+.um-seg{display:flex;gap:8px;margin-top:6px}
+.um-seg button{flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fff;font-family:inherit;font-weight:700;cursor:pointer}
+.um-seg button.on{background:var(--primary);border-color:var(--primary);color:#fff}
+.um-seg button:disabled{opacity:.6;cursor:default}
+.um-note{display:block;margin-top:6px;color:var(--muted);font-weight:400}
+.um-p{margin:0 0 10px}
+.um-err:empty{display:none}
+.um-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+@media(min-width:600px){.um-modal{align-items:center}.um-sheet{border-radius:18px}}
+@media(max-width:900px){.um-grid{grid-template-columns:1fr}}
+@media(max-width:520px){.um-user{flex-wrap:wrap}.um-actions{width:100%}.um-actions .um-btn{flex:1}}
+
+/* ===== Tombol aksi di tabel (mis. Sesuaikan stok) ===== */
+.btn.btn-aksi{display:inline-flex;align-items:center;gap:6px;background:var(--primary);color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700;font-size:13px;white-space:nowrap;box-shadow:0 2px 0 var(--primary-dark);cursor:pointer}
+.btn.btn-aksi:hover{background:var(--primary-dark)}
+.btn.btn-aksi:active{transform:translateY(1px);box-shadow:none}
+
+/* ===== Terjual per bulan (halaman Stok) ===== */
+.sb-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.sb-total td{font-weight:800;background:var(--primary-soft);color:var(--primary-dark)}
+.sb-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);background:#fff}.sb-wrap table{width:100%;margin:0}
+/* Tabel Terjual Per Bulan memakai kolom Nama sebagai kolom pertama; jangan ikut disembunyikan seperti kolom ID di tabel Stok */
+#page-stok #sbPanel .table-wrap table th:first-child,#page-stok #sbPanel .table-wrap table td:first-child{display:table-cell!important}
